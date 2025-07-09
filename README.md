@@ -2,12 +2,15 @@
 
 ![Area51 Icon](Area51.png)
 
-Dies ist ein Writeup für die HackMyVM-Maschine "Area51", erstellt von DarkSpirit. Die Maschine ist als "Medium" eingestuft und erfordert die Ausnutzung einer bekannten Schwachstelle (Log4J) für den initialen Zugriff sowie die Nutzung schwacher Berechtigungen für die Privilegieneskalation.
+## Übersicht
 
-**VM Link:** [Area51 auf HackMyVM](https://hackmyvm.eu/machines/machine.php?vm=Area51)
-**Autor der VM:** DarkSpirit
-**Original Writeup:** [Ben C. - Cyber Security Reports](https://alientec1908.github.io/Area51_HackMyVM_Medium/)
-**Datum des Berichts:** 20. Juni 2025
+*   **VM:** Area51
+*   **Plattform:** [HackMyVM](https://hackmyvm.eu/machines/machine.php?vm=Area51)
+*   **Schwierigkeit:** Medium
+*   **Autor der VM:** DarkSpirit
+*   **Datum des Writeups:** 20. Juni 2025
+*   **Original-Writeup:** https://alientec1908.github.io/Area51_HackMyVM_Medium/
+*   **Autor:** Ben C.
 
 ---
 
